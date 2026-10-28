@@ -1,6 +1,16 @@
-# SuperMew 项目说明
+# 问溪（Wenxi）
 
-SuperMew 是一个知识库优先、面向真实运行与评测的 Agent 平台。它以持久化 Thread、可恢复
+> 循知而行，问有所归。
+
+Agent **小溪**：我是小溪，陪你从一个问题，找到清晰的答案。
+
+[Logo、吉祥物与品牌说明](docs/brand/wenxi.md)
+
+界面采用青绿、暖白与墨绿双主题，新浏览器默认暖白，并保留已有主题选择。
+本地项目目录建议命名为 `Wenxi`；Windows 下需保留 Docker 项目身份并修复虚拟环境入口，
+参见[目录更名流程](docs/runbooks/windows-project-rename.md)。
+
+问溪是一个知识库优先、面向真实运行与评测的 Agent 平台。它以持久化 Thread、可恢复
 Run、版本化 Event、不可变 Document Version 和明确的 Provider 失败语义为核心，提供 RAG、
 HITL、RAG 效果评测以及可审计的 Skill / Tool 执行。
 
@@ -8,7 +18,7 @@ HITL、RAG 效果评测以及可审计的 Skill / Tool 执行。
 
 ## 项目概览
 
-SuperMew 不把一次聊天请求视为一个不可恢复的 HTTP 调用，而是将用户输入、Agent 执行、工具
+问溪不把一次聊天请求视为一个不可恢复的 HTTP 调用，而是将用户输入、Agent 执行、工具
 调用、检索证据、人工确认和最终结果建模为一组可以持久化、重放和审计的领域对象。
 
 - **对话与执行**：Thread 保存长期会话边界，Message 保存事实历史，Run 表示一次可恢复执行，
@@ -146,6 +156,8 @@ API 与两个 worker 必须使用同一 release 和配置。API 与索引 worker
 
 ### 环境要求
 
+- 后端支持 Linux 与原生 Windows；Skill Registry 分别使用 POSIX 文件描述符和 Windows
+  原生目录句柄安全读取，拒绝符号链接及 Windows junction 等重解析点。
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
 - Node.js 20.19+ 与 npm 10+
@@ -163,6 +175,8 @@ cp .env.example .env
   `EVALUATION_MODEL`；这些模型值只用于首次创建模型控制面默认值。
 - `JWT_SECRET_KEY`：至少 32 字符的随机值，例如使用 `openssl rand -hex 32` 生成。
 - 如需注册管理员，设置独立的 `ADMIN_INVITE_CODE`；留空会禁用公开 admin 注册。
+- `RUSTFS_ACCESS_KEY` 与 `RUSTFS_SECRET_KEY`：开发 Compose 的对象存储凭据，
+  由 Compose 同时传给 RustFS 和 Milvus；两项均不能为空。
 
 `.env.example` 中的 PostgreSQL 与 Redis DSN 已与开发 Compose 默认值对齐。Rerank、Web
 Research、SQL Assistant 和 Sandbox 都是可选能力，默认关闭或允许明确降级。
@@ -184,12 +198,19 @@ uv run --frozen alembic upgrade head
 uv run --frozen python -m backend.tools.registry_cli validate
 ```
 
-开发 Compose 只启动 PostgreSQL、Redis、etcd、MinIO、Milvus 和 Attu，不启动应用进程。
+开发 Compose 只启动 PostgreSQL、Redis、etcd、RustFS、Milvus 和 Attu，不启动应用进程。
+Milvus 对象存储启动故障见[排查步骤](docs/runbooks/repository-quality-gates.md#开发-compose-对象存储排障)。
 
 ### 3. 启动应用
 
 ```bash
 ./scripts/start.sh
+```
+
+Windows PowerShell 使用同一个 Python 启动器：
+
+```powershell
+.\.venv\Scripts\python.exe -m backend.launcher --port 8000
 ```
 
 统一启动器会管理三个进程：
@@ -214,6 +235,22 @@ uv run --frozen python -m backend.tools.registry_cli validate
 
 前端开发时可另开终端运行 `cd frontend && npm run dev`。Vite 固定监听 3000，并代理到 8000
 端口的 API。
+API 默认自动重载；修改 worker 代码或 `.env` 后需要重启整个启动器。
+
+本地尚未缓存 Dense Embedding 模型、仅需联调页面和普通 API 时，可在根目录 `.env` 中设置
+`EMBEDDING_WARMUP_ON_START=false`，然后使用上述启动命令。也可在 PowerShell 中临时覆盖：
+
+```powershell
+$env:EMBEDDING_WARMUP_ON_START="false"
+.\.venv\Scripts\python.exe -m backend.launcher --port 8000
+```
+
+这不会让未加载的模型变为可用；`/health/ready` 在 Embedding 未就绪时仍返回 503。
+RAG 与文档入库可以使用[远程嵌入 API](docs/runbooks/repository-quality-gates.md#远程嵌入-api)，
+无需下载本地权重；使用本地模式时，需要先准备 `.env` 中 `EMBEDDING_MODEL` 对应的固定版本模型，步骤见
+[开发环境模型下载排障](docs/runbooks/repository-quality-gates.md#开发环境模型下载排障)。
+准备好后将 `.env` 中的预热配置改回 `true`；如果设置过上述临时变量，还需执行
+`Remove-Item Env:EMBEDDING_WARMUP_ON_START`，然后重启整个启动器。
 
 ## 生产部署
 
@@ -265,6 +302,12 @@ pin、回滚和 Secret 规则见 [Skill / Tool Registry Runbook](docs/runbooks/s
 - `MODEL`、`FAST_MODEL`、`GRADE_MODEL`、`EVALUATION_MODEL` 与 `BASE_URL` 只用于数据库尚未初始化时
   的首次种子。
 - 管理员通过 `/v1/models` 维护 Model Profile，并为 Answer、Fast、Grader、Evaluator 分配模型。
+- 模型中心的“思考模式”可选择跟随服务商默认、关闭或开启。对应 `enable_thinking=null/false/true`；
+  默认不发送该参数，显式开启/关闭仅适用于支持 `enable_thinking` 的 OpenAI-compatible API。
+  服务商不支持时会报告调用错误，不会静默忽略或切换模式。该设置与超时、能力一起冻结到新任务的
+  Model Snapshot，旧 Run/Job 不变；修改已共享的 Profile 会影响之后使用它的所有角色。
+- 升级包含思考设置的版本前，先停止 API/Worker，并在仓库根目录执行 `uv run alembic upgrade head`。
+  迁移为现有 Profile 保留服务商默认，不修改历史任务快照；随后启动 launcher，并在模型中心保存设置。
 - 新 Run 和 Evaluation Job 在创建时冻结 Profile、Assignment 与能力信息；运行中修改控制面不会
   改变已经开始或正在等待 HITL 的任务。
 - 删除或停用 Profile 前必须解除仍然存在的 Assignment 或其他活跃引用。
@@ -395,7 +438,7 @@ Thread Run、知识检索、HITL resume、上传与 general API 使用独立 pol
 
 ## 目录与架构
 
-![SuperMew 系统架构图](docs/architecture/assets/supermew-system-architecture.png)
+![问溪系统架构图](docs/architecture/assets/supermew-system-architecture.png)
 
 [查看交互式架构图](docs/architecture/supermew-system-architecture.html) ·
 [查看 Archify 可编辑真源](docs/architecture/supermew-system-architecture.archify.json)
@@ -714,8 +757,8 @@ Case，并由独立 worker 执行。CLI 更适合仓库 Gate、分支比较与�
   Rate Limit。
 - **向量与检索**：Milvus 2.5+、HNSW Dense index、SPARSE_INVERTED_INDEX、原生中文 analyzer、
   BM25 Function、RRF、Auto-merging。
-- **Embedding 与 Rerank**：`langchain_huggingface` 本地 Embedding，默认固定 revision 的
-  `BAAI/bge-m3`；可选 Jina-compatible Rerank Provider。
+- **Embedding 与 Rerank**：Sentence Transformers 本地 Embedding，默认固定 revision 的
+  `BAAI/bge-m3`，也支持 OpenAI-compatible 远程嵌入 API；可选 Jina-compatible Rerank Provider。
 - **文档解析**：PyPDF、docx2txt、Unstructured、openpyxl、msoffcrypto-tool 和多级递归分块。
 - **前端**：Vite、Vue 3 SFC、TypeScript、Pinia、Axios、Marked、DOMPurify、Highlight.js、
   FontAwesome 与 Sass。
@@ -744,8 +787,12 @@ Case，并由独立 worker 执行。CLI 更适合仓库 Gate、分支比较与�
 
 ### Embedding 与 Rerank
 
+- `EMBEDDING_PROVIDER`：`local`（默认）或 `openai-compatible`，显式选择编码后端。
+  远程模式需要独立配置 `EMBEDDING_BASE_URL` 和 `EMBEDDING_API_KEY`，不会自动继承对话配置，
+  也不会在 API 失败时切回本地；配置示例见[Runbook](docs/runbooks/repository-quality-gates.md#远程嵌入-api)。
 - `EMBEDDING_MODEL`、`EMBEDDING_MODEL_REVISION`、`EMBEDDING_DEVICE`、
-  `DENSE_EMBEDDING_DIM`：本地 Dense 模型与 Milvus schema 身份。
+  `DENSE_EMBEDDING_DIM`：Dense 模型与 Milvus schema 身份；device 仅用于本地模式。
+  远程 revision 是部署版本标签，API 是否固定权重版本取决于服务商。
 - `EMBEDDING_TIMEOUT_SECONDS`、`EMBEDDING_EXECUTOR_WORKERS`、`EMBEDDING_MAX_CONCURRENCY`：
   Embedding 执行与并发预算。
 - `EMBEDDING_QUERY_MICROBATCH_MS`、`EMBEDDING_QUERY_MAX_BATCH_SIZE`、
@@ -913,7 +960,7 @@ Event 表达。
 
 ### 6. Hybrid Search 深度实现
 
-- **Dense Pathway**：`langchain_huggingface.HuggingFaceEmbeddings` 使用固定模型 revision 生成
+- **Dense Pathway**：统一 EmbeddingRuntime 使用本地固定 revision 模型或显式远程 API 生成
   Dense vector，维度必须与 Milvus `dense_embedding` schema 一致；默认 `BAAI/bge-m3` 为 1024。
 - **Sparse Pathway**：文档只需写入启用中文 analyzer 的 `text` 字段，Milvus 通过
   `FunctionType.BM25` 生成并维护 `sparse_embedding`。
