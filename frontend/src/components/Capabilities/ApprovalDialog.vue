@@ -360,7 +360,7 @@ watch(
 }
 
 .approval-tool-list code {
-  color: var(--lilac);
+  color: var(--accent-secondary);
   font-size: 8px;
 }
 
@@ -402,9 +402,9 @@ watch(
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 10px;
   padding: 12px;
-  border: 1px solid rgba(168, 246, 209, 0.18);
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
   border-radius: 12px;
-  background: rgba(168, 246, 209, 0.05);
+  background: rgba(var(--accent-rgb), 0.05);
 }
 
 .approval-binding-icon {
@@ -413,8 +413,8 @@ watch(
   height: 34px;
   place-items: center;
   border-radius: 10px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.08);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 .approval-binding strong {
@@ -430,7 +430,7 @@ watch(
 }
 
 .approval-binding code {
-  color: var(--mint);
+  color: var(--accent);
 }
 
 .approval-error {

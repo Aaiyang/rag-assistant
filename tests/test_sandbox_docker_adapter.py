@@ -236,6 +236,9 @@ def test_create_uses_full_isolation_without_host_mounts_or_host_environment():
     assert "nodev" in joined
     assert "--mount" not in argv
     assert "-v" not in argv
+    # Docker's default is a private PID namespace; the CLI has no "private"
+    # PID mode, and host/container modes would break execution isolation.
+    assert "--pid" not in argv
     assert "docker.sock" not in joined
     assert source not in joined
 

@@ -1,6 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import { readFile, readdir } from 'node:fs/promises';
-import { extname, join, relative } from 'node:path';
+import { extname, join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const DIST_DIR = new URL('../dist/', import.meta.url);
 const LIMITS = {
@@ -45,7 +46,7 @@ function collectInitialFiles(item) {
 }
 collectInitialFiles(entry);
 
-const distPath = new URL('.', DIST_DIR).pathname;
+const distPath = fileURLToPath(DIST_DIR);
 const files = (await listFiles(distPath)).filter((path) => ['.css', '.js'].includes(extname(path)));
 const failures = [];
 const measurements = [];
@@ -53,7 +54,7 @@ let initialJavaScriptGzip = 0;
 
 for (const path of files) {
   const content = await readFile(path);
-  const name = relative(distPath, path);
+  const name = relative(distPath, path).split(sep).join('/');
   const extension = extname(path);
   const bytes = content.byteLength;
   const gzipBytes = gzipSync(content).byteLength;

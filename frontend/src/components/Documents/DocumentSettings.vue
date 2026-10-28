@@ -4,7 +4,7 @@
       <div>
         <span class="panel-eyebrow">Mew memory</span>
         <h1>知识库</h1>
-        <p>管理喵喵可以检索的文档、索引与数据源。</p>
+        <p>管理小溪可以检索的文档、索引与数据源。</p>
       </div>
       <button
         type="button"
@@ -54,7 +54,7 @@
         <div class="documents-section-head">
           <div>
             <h2>全部文档</h2>
-            <p>{{ filteredDocuments.length }} 份资料可供喵喵检索</p>
+            <p>{{ filteredDocuments.length }} 份资料可供小溪检索</p>
           </div>
           <label class="document-search">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -84,7 +84,7 @@
           />
           <span v-else class="empty-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
           <h3>{{ searchQuery ? '没有匹配的文档' : '知识库还是空的' }}</h3>
-          <p>{{ searchQuery ? '换一个关键词试试。' : '从右侧上传第一份资料，让喵喵开始学习。' }}</p>
+          <p>{{ searchQuery ? '换一个关键词试试。' : '从右侧上传第一份资料，让小溪开始学习。' }}</p>
         </div>
 
         <div v-else class="documents-list">
@@ -102,7 +102,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import UploadSection from './UploadSection.vue';
 import DocumentItem from './DocumentItem.vue';
 import { useDocumentStore } from '@/stores/documents';
-import emptyKnowledge from '@/assets/images/empty-knowledge.webp';
+import emptyKnowledge from '@/assets/images/xiaoxi-mascot.webp';
 
 const documentStore = useDocumentStore();
 const searchQuery = ref('');

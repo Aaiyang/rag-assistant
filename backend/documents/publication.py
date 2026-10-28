@@ -82,9 +82,7 @@ class DocumentPublicationConfig:
     def from_runtime(cls) -> DocumentPublicationConfig:
         settings = get_settings()
         base_collection = MilvusSettings.from_env().collection_name
-        embedding_identity = (
-            f"{settings.embedding.model}@{settings.embedding.revision}"
-        )[:160]
+        embedding_identity = settings.embedding.index_identity
         return cls(
             tenant_id=os.getenv("DEFAULT_TENANT_ID", "default").strip() or "default",
             knowledge_base_name=(

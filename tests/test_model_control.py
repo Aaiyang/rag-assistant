@@ -181,3 +181,39 @@ def test_environment_seed_never_overrides_admin_assignment(model_control):
         model_control.runtime_snapshot().require(ModelRole.ANSWER).profile_id
         == chosen.id
     )
+
+
+def test_thinking_mode_is_persisted_versioned_and_frozen(model_control):
+    profile = model_control.create_profile(
+        username="admin",
+        display_name="direct",
+        provider="openai",
+        model_name="qwen",
+        base_url="",
+        timeout_seconds=120,
+        supports_stream=True,
+        supports_structured_output=True,
+        enable_thinking=False,
+    )
+    for role in ModelRole:
+        model_control.assign_role(username="admin", role=role, profile_id=profile.id)
+    before = model_control.runtime_snapshot()
+    updated = model_control.update_profile(
+        username="admin",
+        profile_id=profile.id,
+        display_name=profile.display_name,
+        provider=profile.provider,
+        model_name=profile.model_name,
+        base_url=profile.base_url,
+        timeout_seconds=120,
+        supports_stream=True,
+        supports_structured_output=True,
+        enabled=True,
+        enable_thinking=True,
+    )
+    assert updated.version == 2
+    assert model_control.repository.get_profile(profile.id).enable_thinking is True
+    after = model_control.runtime_snapshot()
+    assert before.catalog_hash != after.catalog_hash
+    assert all(spec.enable_thinking is False for spec in before.assignments.values())
+    assert all(spec.enable_thinking is True for spec in after.assignments.values())

@@ -35,6 +35,7 @@ class ModelControlRepository:
             model_name=profile.model_name,
             base_url=profile.base_url,
             timeout_seconds=float(profile.timeout_seconds),
+            enable_thinking=profile.enable_thinking,
             supports_stream=profile.supports_stream,
             supports_structured_output=profile.supports_structured_output,
             enabled=profile.enabled,
@@ -121,6 +122,7 @@ class ModelControlRepository:
         enabled: bool,
         source: str,
         username: str | None,
+        enable_thinking: bool | None = None,
     ) -> ModelProfileRecord:
         db = self._session_factory()
         try:
@@ -132,6 +134,7 @@ class ModelControlRepository:
                 model_name=model_name,
                 base_url=base_url,
                 timeout_seconds=Decimal(str(timeout_seconds)),
+                enable_thinking=enable_thinking,
                 supports_stream=bool(supports_stream),
                 supports_structured_output=bool(supports_structured_output),
                 enabled=bool(enabled),
@@ -173,6 +176,7 @@ class ModelControlRepository:
         supports_structured_output: bool,
         enabled: bool,
         username: str,
+        enable_thinking: bool | None = None,
     ) -> ModelProfileRecord:
         db = self._session_factory()
         try:
@@ -232,6 +236,7 @@ class ModelControlRepository:
                 profile.model_name = model_name
                 profile.base_url = base_url
                 profile.timeout_seconds = Decimal(str(timeout_seconds))
+                profile.enable_thinking = enable_thinking
                 profile.supports_stream = bool(supports_stream)
                 profile.supports_structured_output = bool(supports_structured_output)
                 profile.enabled = bool(enabled)

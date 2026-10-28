@@ -4,12 +4,12 @@
     :class="['message', msg.isUser ? 'user-message' : 'bot-message']"
   >
     <div v-if="!msg.isUser" class="message-avatar" aria-hidden="true">
-      <img :src="superMewMark" class="brand-mark-image" alt="" />
+      <img :src="xiaoxiMascot" class="agent-avatar-image" alt="" />
     </div>
 
     <div class="message-column">
       <div v-if="!msg.isUser" class="message-author">
-        <span>喵喵助手</span>
+        <span>小溪</span>
         <small v-if="msg.skillName" class="message-skill-badge">
           <i class="fa-solid fa-wand-magic-sparkles"></i>
           {{ skillCompactName(msg.skillName) }}
@@ -91,7 +91,7 @@ import ExecutionTimeline from '@/components/Run/ExecutionTimeline.vue';
 import type { Message } from '@/types/chat';
 import { useChatStore } from '@/stores/chat';
 import { getPublicError } from '@/utils/api';
-import superMewMark from '@/assets/images/supermew-mark.png';
+import xiaoxiMascot from '@/assets/images/xiaoxi-mascot.webp';
 
 const props = defineProps<{
   msg: Message;
@@ -146,10 +146,10 @@ const loadInspector = async (event: Event) => {
   align-items: center;
   gap: 4px;
   padding: 3px 6px;
-  border: 1px solid rgba(200, 185, 255, 0.18);
+  border: 1px solid rgba(var(--accent-secondary-rgb), 0.18);
   border-radius: 999px;
-  color: var(--lilac) !important;
-  background: rgba(200, 185, 255, 0.06);
+  color: var(--accent-secondary) !important;
+  background: rgba(var(--accent-secondary-rgb), 0.06);
 }
 
 .message-run-inspector {

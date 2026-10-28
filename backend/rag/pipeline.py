@@ -361,7 +361,9 @@ def _invoke_structured_model(
         cancellation=cancellation,
     )
     return _provider_executor.call(
-        lambda: model.with_structured_output(schema).invoke(messages),
+        lambda: model.with_structured_output(schema, method="function_calling").invoke(
+            messages
+        ),
         context=context,
         policy=_model_policy,
     )

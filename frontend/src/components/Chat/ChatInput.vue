@@ -5,7 +5,7 @@
         <span class="hitl-icon"><i class="fa-solid fa-circle-question"></i></span>
         <span>
           <strong>需要你补充一下</strong>
-          <small>喵喵会沿着你的选择继续原来的检索流程</small>
+          <small>小溪会沿着你的选择继续原来的检索流程</small>
         </span>
       </div>
       <div class="hitl-panel-prompt">{{ chatStore.currentPendingHitl.prompt }}</div>
@@ -343,8 +343,8 @@ onUnmounted(() => window.removeEventListener('capability-selected', focusTextare
   flex: none;
   place-items: center;
   border-radius: 9px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.07);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.07);
   font-size: var(--font-small);
 }
 
@@ -407,7 +407,7 @@ onUnmounted(() => window.removeEventListener('capability-selected', focusTextare
 }
 
 .mode-center-link:hover:not(:disabled) {
-  color: var(--mint);
+  color: var(--accent);
   background: var(--surface);
 }
 
@@ -417,10 +417,10 @@ onUnmounted(() => window.removeEventListener('capability-selected', focusTextare
   gap: 7px;
   margin-bottom: 7px;
   padding: 8px 10px;
-  border: 1px solid rgba(168, 246, 209, 0.16);
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
   border-radius: 10px;
   color: var(--muted);
-  background: rgba(168, 246, 209, 0.04);
+  background: rgba(var(--accent-rgb), 0.04);
   font-size: var(--font-caption);
 }
 
@@ -474,9 +474,9 @@ onUnmounted(() => window.removeEventListener('capability-selected', focusTextare
 }
 
 .sandbox-language button.active {
-  border-color: rgba(168, 246, 209, 0.3);
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.06);
+  border-color: rgba(var(--accent-rgb), 0.3);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
 }
 
 .sandbox-language small {

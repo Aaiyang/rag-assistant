@@ -6,7 +6,14 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
 
 
 class ModelRole(StrEnum):
@@ -53,6 +60,7 @@ class ModelProfileRecord(BaseModel):
     model_name: str = Field(min_length=1, max_length=160)
     base_url: str = Field(default="", max_length=512)
     timeout_seconds: float = Field(gt=0, le=600)
+    enable_thinking: StrictBool | None = None
     supports_stream: bool
     supports_structured_output: bool
     enabled: bool
@@ -79,6 +87,7 @@ class ModelRuntimeSpec(BaseModel):
     model_name: str
     base_url: str = ""
     timeout_seconds: float = Field(gt=0, le=600)
+    enable_thinking: StrictBool | None = None
     supports_stream: bool
     supports_structured_output: bool
 
@@ -92,6 +101,7 @@ class ModelRuntimeSpec(BaseModel):
             model_name=profile.model_name,
             base_url=profile.base_url,
             timeout_seconds=profile.timeout_seconds,
+            enable_thinking=profile.enable_thinking,
             supports_stream=profile.supports_stream,
             supports_structured_output=profile.supports_structured_output,
         )
@@ -117,7 +127,9 @@ class ModelCatalogSnapshot(BaseModel):
 
 def model_catalog_hash(assignments: dict[ModelRole, ModelRuntimeSpec]) -> str:
     payload = {
-        role.value: assignments[role].model_dump(mode="json")
+        # Omitted thinking configuration has exactly the pre-extension semantics.
+        # Canonical omission preserves hashes of immutable historical snapshots.
+        role.value: assignments[role].model_dump(mode="json", exclude_none=True)
         for role in sorted(assignments, key=lambda value: value.value)
     }
     encoded = json.dumps(

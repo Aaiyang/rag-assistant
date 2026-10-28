@@ -356,6 +356,7 @@ class ModelProfile(Base):
     timeout_seconds: Mapped[Decimal] = mapped_column(
         Numeric(10, 3), default=Decimal("30"), nullable=False
     )
+    enable_thinking: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     supports_stream: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     supports_structured_output: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False

@@ -15,7 +15,7 @@
         >
           <div class="auth-panel auth-restore-panel">
             <span class="auth-mini-logo" aria-hidden="true">
-              <img :src="superMewMark" class="brand-mark-image" alt="" />
+              <img :src="wenxiMark" class="brand-mark-image" alt="" />
             </span>
             <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
             <h1>正在恢复登录状态</h1>
@@ -56,7 +56,7 @@ import { useCapabilityStore } from '@/stores/capabilities';
 import { useCapabilityAdminStore } from '@/stores/capabilityAdmin';
 import { useModelStore } from '@/stores/models';
 import { useEvaluationStore } from '@/stores/evaluations';
-import superMewMark from '@/assets/images/supermew-mark.png';
+import wenxiMark from '@/assets/images/wenxi-mark.png';
 
 const HistorySidebar = defineAsyncComponent(() => import('@/components/HistorySidebar.vue'));
 const ChatArea = defineAsyncComponent(() => import('@/components/Chat/ChatArea.vue'));
@@ -92,11 +92,14 @@ const evaluationStore = useEvaluationStore();
 type Theme = 'dark' | 'light';
 
 const storedTheme = localStorage.getItem('supermew-theme');
-const theme = ref<Theme>(storedTheme === 'light' ? 'light' : 'dark');
+const theme = ref<Theme>(storedTheme === 'dark' ? 'dark' : 'light');
 
 const applyTheme = (nextTheme: Theme) => {
   document.documentElement.dataset.theme = nextTheme;
   document.documentElement.style.colorScheme = nextTheme;
+  const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  const pageColor = getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim();
+  if (themeColor && pageColor) themeColor.content = pageColor;
   localStorage.setItem('supermew-theme', nextTheme);
 };
 

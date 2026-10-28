@@ -62,6 +62,11 @@ deferred Adapter 会预先注册进 compiled graph，但初始不向模型暴露
 Skill 使用 `skills/<name>/skill.yaml` 和相对 entrypoint。启动时拒绝未知字段、重复名称、
 未知工具、绝对路径、`..`、反斜线、symlink、根外路径、坏 UTF-8 和超限内容。Registry
 读取并冻结正文，以 canonical manifest JSON、NUL 和原始正文 bytes 计算 SHA-256。
+文件读取按操作系统使用同一安全文件 Interface：POSIX 逐级通过 `dir_fd` 与
+`O_NOFOLLOW` 打开；Windows 通过目录句柄相对 `NtCreateFile` 打开并检查重解析点，
+读取期间拒绝共享写入和删除。Windows junction、符号链接和其他重解析点均拒绝；
+manifest 与 entrypoint 不接受盘符或 Alternate Data Stream 语法。平台读取失败不授权
+普通路径读取 fallback，两个平台共用后续 manifest 校验、大小限制和内容 hash 流程。
 基础动态上下文只披露过滤后的摘要；完整正文只在显式 slash、可信 router 或
 `describe_skill` 激活后注入。
 

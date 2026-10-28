@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Protocol
 
+from backend.providers.embedding_http import HttpxEmbeddingEncoder
+
 from backend.providers.core import (
     CancellationProbe,
     ProviderCallContext,
@@ -110,7 +112,7 @@ class _WorkItem:
 
 
 class EmbeddingRuntime:
-    """Async-native local embedding Adapter with bounded execution.
+    """Async embedding Adapter with bounded local or explicit remote execution.
 
     One runtime belongs to one event loop. Model construction and encoding run
     only on its dedicated executor. Query and document work have separate
@@ -125,6 +127,7 @@ class EmbeddingRuntime:
         device: str | None = None,
         provider_name: str = "embedding-model",
         model_factory: ModelFactory | None = None,
+        remote_encoder: HttpxEmbeddingEncoder | None = None,
         provider_executor: ProviderExecutor | None = None,
         policy: ProviderPolicy | None = None,
         encoder_concurrency: int = 2,
@@ -183,6 +186,8 @@ class EmbeddingRuntime:
             raise ValueError("device cannot be empty")
 
         self._model_factory = model_factory or self._create_default_model
+        self._remote_encoder = remote_encoder
+        self._waiters: dict[asyncio.Future[tuple[float, ...]], int] = {}
         self._provider_executor = provider_executor or ProviderExecutor(
             clock=clock,
             async_sleeper=async_sleeper,
@@ -402,6 +407,9 @@ class EmbeddingRuntime:
                 if not future.done():
                     future.cancel()
 
+            if self._remote_encoder is not None:
+                await self._remote_encoder.aclose()
+
             if not self._executor_shutdown:
                 self._executor_shutdown = True
                 await asyncio.to_thread(
@@ -467,7 +475,7 @@ class EmbeddingRuntime:
         if cached is not None:
             return cached
         if shared is not None:
-            return await self._await_shared(shared, cancellation)
+            return await self._await_shared(shared, cancellation, key)
 
         self._raise_if_cancelled(cancellation)
         capacity = self._require_capacity()
@@ -503,13 +511,15 @@ class EmbeddingRuntime:
             return cached
         if shared is None:
             raise AssertionError("embedding work was neither cached nor queued")
-        return await self._await_shared(shared, cancellation)
+        return await self._await_shared(shared, cancellation, key)
 
     async def _await_shared(
         self,
         future: asyncio.Future[tuple[float, ...]],
         cancellation: CancellationProbe | None,
+        key: _CacheKey,
     ) -> tuple[float, ...]:
+        self._waiters[future] = self._waiters.get(future, 0) + 1
         shielded = asyncio.shield(future)
         try:
             if cancellation is None:
@@ -524,6 +534,16 @@ class EmbeddingRuntime:
         except BaseException:
             shielded.cancel()
             raise
+        finally:
+            count = self._waiters[future] - 1
+            if count:
+                self._waiters[future] = count
+            else:
+                self._waiters.pop(future)
+                if self._remote_encoder is not None and not future.done():
+                    future.cancel()
+                    if self._inflight.get(key) is future:
+                        self._inflight.pop(key, None)
 
     async def _ensure_started(self) -> None:
         self._raise_if_closed()
@@ -597,16 +617,21 @@ class EmbeddingRuntime:
         try:
             gate = self._require_encoder_gate()
             async with gate:
-                model = await self._get_model()
                 self._batches += 1
-                loop = asyncio.get_running_loop()
-                raw = await loop.run_in_executor(
-                    self._executor,
-                    self._encode_sync,
-                    model,
-                    mode,
-                    [item.text for item in batch],
-                )
+                if self._remote_encoder is not None:
+                    if all(item.future.done() for item in batch):
+                        return
+                    raw = await self._encode_remote(batch)
+                else:
+                    model = await self._get_model()
+                    loop = asyncio.get_running_loop()
+                    raw = await loop.run_in_executor(
+                        self._executor,
+                        self._encode_sync,
+                        model,
+                        mode,
+                        [item.text for item in batch],
+                    )
             vectors = self._validate_vectors(raw, expected_count=len(batch))
         except asyncio.CancelledError:
             raise
@@ -630,6 +655,27 @@ class EmbeddingRuntime:
         for item, vector in zip(batch, vectors, strict=True):
             if not item.future.done():
                 item.future.set_result(vector)
+
+    async def _encode_remote(self, batch: Sequence[_WorkItem]) -> Any:
+        assert self._remote_encoder is not None
+        request = asyncio.create_task(
+            self._remote_encoder.encode([item.text for item in batch])
+        )
+        abandoned = asyncio.gather(
+            *(asyncio.shield(item.future) for item in batch), return_exceptions=True
+        )
+        try:
+            done, _ = await asyncio.wait(
+                {request, abandoned}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if request in done:
+                return request.result()
+            # No caller is still waiting. Abort HTTP without killing the batcher.
+            raise RuntimeError("embedding batch has no remaining callers")
+        finally:
+            request.cancel()
+            abandoned.cancel()
+            await asyncio.gather(request, abandoned, return_exceptions=True)
 
     async def _fail_batch(
         self,
@@ -684,7 +730,7 @@ class EmbeddingRuntime:
 
         kwargs: dict[str, Any] = {}
         try:
-            parameters = inspect.signature(method).parameters.values()
+            parameters = tuple(inspect.signature(method).parameters.values())
         except (TypeError, ValueError):
             parameters = ()
         accepts_kwargs = any(
@@ -746,6 +792,11 @@ class EmbeddingRuntime:
                 dimension = len(vector)
             elif len(vector) != dimension:
                 raise ValueError("embedding vector dimension does not match runtime")
+            if self._remote_encoder is not None:
+                norm = math.hypot(*vector)
+                if not math.isfinite(norm) or norm == 0:
+                    raise ValueError("embedding API returned an invalid vector norm")
+                vector = [number / norm for number in vector]
             vectors.append(tuple(vector))
 
         if dimension is None:

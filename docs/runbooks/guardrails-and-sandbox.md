@@ -75,7 +75,7 @@ docker --host 'unix:///path/to/supermew-rootless.sock' \
 
 ## 配置
 
-开发环境最小启用配置：
+Linux/rootless daemon 的最小启用配置：
 
 ```dotenv
 SANDBOX_ENABLED=true
@@ -84,6 +84,14 @@ SANDBOX_DOCKER_IMAGE=sha256:<sandbox-image-id>
 SANDBOX_DOCKER_HOST=unix:///path/to/supermew-rootless.sock
 SANDBOX_REQUIRE_ROOTLESS=true
 ```
+
+Windows 原生后端配合 Docker Desktop 的本地开发环境应使用 Linux 容器。若 Docker CLI 在
+Adapter 的最小环境中可连接默认 daemon，可以保持 `SANDBOX_DOCKER_HOST` 为空，并设置
+`SANDBOX_REQUIRE_ROOTLESS=false`；镜像仍必须使用已构建的完整 image ID。此配置不适用于
+生产环境，也不会继承用户 Docker context。显式 `npipe://` endpoint 目前不受支持。
+
+Docker 的独立 PID namespace 通过省略 `--pid` 使用默认行为；不要传入 CLI 不接受的
+`--pid private`，也不要改为共享宿主或其他容器的 PID namespace。
 
 生产环境还必须设置 `APP_ENV=production`；此时 `SANDBOX_REQUIRE_ROOTLESS=false` 会令应用拒绝
 启动。完整 CPU、memory、PID、workspace、source、output、file/path 与 cleanup 预算见

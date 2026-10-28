@@ -240,7 +240,8 @@ class RagLatencyGuardTests(unittest.TestCase):
                 self.payload = payload
                 self.schema = None
 
-            def with_structured_output(self, schema):
+            def with_structured_output(self, schema, *, method):
+                assert method == "function_calling"
                 self.schema = schema
                 return self
 

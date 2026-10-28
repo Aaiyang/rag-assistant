@@ -1,1 +1,1 @@
-"""SuperMew backend package."""
+"""Wenxi backend package."""

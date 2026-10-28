@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from backend.model_control.contracts import (
     ModelProfileRecord,
@@ -20,6 +20,7 @@ class ModelProfileCreateRequest(ModelSchema):
     model_name: str = Field(min_length=1, max_length=160)
     base_url: str = Field(default="", max_length=512)
     timeout_seconds: float = Field(default=30.0, gt=0, le=600)
+    enable_thinking: StrictBool | None = None
     supports_stream: bool = True
     supports_structured_output: bool = True
     enabled: bool = True

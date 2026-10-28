@@ -1,9 +1,9 @@
 <template>
   <section class="welcome-screen">
-    <img :src="superMewMascot" class="welcome-avatar" alt="" aria-hidden="true" />
-    <span class="welcome-eyebrow"><i class="fa-solid fa-sparkles"></i> 喵喵已准备好</span>
-    <h2>你好，我是喵喵。</h2>
-    <p>我会在回答时检索你的知识库、展示处理过程，并把每个关键结论链接回原始证据。</p>
+    <img :src="xiaoxiMascot" class="welcome-avatar" alt="小溪，问溪的溪水精灵吉祥物" />
+    <span class="welcome-eyebrow"><i class="fa-solid fa-sparkles"></i> 问溪 · WENXI</span>
+    <h2>循知而行，问有所归。</h2>
+    <p>我是小溪，陪你从一个问题，找到清晰的答案。</p>
 
     <div class="welcome-mode-grid" aria-label="快速选择能力">
       <button
@@ -50,7 +50,7 @@ import {
 } from '@/capabilities/skillPresentation';
 import { useCapabilityStore } from '@/stores/capabilities';
 import type { CapabilitySkill } from '@/types/capabilities';
-import superMewMascot from '@/assets/images/supermew-mascot.webp';
+import xiaoxiMascot from '@/assets/images/xiaoxi-mascot.webp';
 
 const capabilityStore = useCapabilityStore();
 const featuredNames = ['knowledge-base', 'web-research', 'sql-assistant', 'sandbox'];
@@ -73,8 +73,8 @@ const unavailableLabel = (skill: CapabilitySkill) =>
 .welcome-mode-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 20px;
+  gap: 10px;
+  margin-top: 24px;
 }
 
 .welcome-mode-grid button {
@@ -82,7 +82,7 @@ const unavailableLabel = (skill: CapabilitySkill) =>
   min-width: 0;
   justify-items: center;
   gap: 5px;
-  padding: 12px 8px;
+  padding: 15px 9px;
   border: 1px solid var(--line);
   border-radius: 13px;
   color: var(--muted);
@@ -96,10 +96,11 @@ const unavailableLabel = (skill: CapabilitySkill) =>
 
 .welcome-mode-grid button:hover:not(:disabled),
 .welcome-mode-grid button.active {
-  border-color: rgba(168, 246, 209, 0.3);
+  border-color: rgba(var(--accent-rgb), 0.3);
   color: var(--text-soft);
-  background: rgba(168, 246, 209, 0.055);
+  background: rgba(var(--accent-rgb), 0.055);
   transform: translateY(-2px);
+  box-shadow: var(--card-shadow);
 }
 
 .welcome-mode-grid button > span {
@@ -108,8 +109,8 @@ const unavailableLabel = (skill: CapabilitySkill) =>
   height: 30px;
   place-items: center;
   border-radius: 9px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.07);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.07);
   font-size: var(--font-small);
 }
 
@@ -127,6 +128,12 @@ const unavailableLabel = (skill: CapabilitySkill) =>
 }
 
 .welcome-mode-grid small {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.55;
+  min-height: 2.9em;
   font-size: var(--font-micro);
 }
 
@@ -138,7 +145,7 @@ const unavailableLabel = (skill: CapabilitySkill) =>
   padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  color: var(--lilac);
+  color: var(--accent-secondary);
   background: transparent;
   cursor: pointer;
   font-size: var(--font-caption);

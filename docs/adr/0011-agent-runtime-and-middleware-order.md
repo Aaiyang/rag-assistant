@@ -40,7 +40,11 @@ Run、Event、Checkpoint 是持久化事实来源，需要一个深 Module 隐�
 
 ## 不变量
 
-- 基础 System Prompt 保持稳定；日期、用户、Thread、Run 和长期记忆通过独立动态消息注入。
+- 基础 System Prompt 保持稳定；日期、用户、Thread、Run 和长期记忆保存在独立的动态上下文块。
+  DynamicContextMiddleware 每轮将稳定前缀和动态块合并为唯一的首条 SystemMessage，清空
+  本轮 ModelRequest.system_message，避免 LangChain 再追加第二条 system 消息而被部分
+  OpenAI-compatible Provider 拒绝。原始请求与历史不变；合并块保留原子预算保护和 Skill
+  标记，并在合并后估算完整输入，不能截断可信 Skill 指令或放宽记忆的数据边界。
 - 动态记忆是“不可信数据”，不能成为系统指令；预算紧张时先裁记忆和 Skill
   summary catalog，并保持 XML 包装完整。
 - active Skill instructions 是不可分割的可信块，必须完整计入输入硬预算；若连同

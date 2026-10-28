@@ -25,6 +25,20 @@ ADR-0014 已建立纯评分 Interface、Dataset fingerprint、baseline 和 GateP
 
 ## 不变量
 
+### 显式思考配置（2026-10-20）
+
+Model Profile 增加可空布尔 `enable_thinking`：null 表示跟随 Provider 默认并省略请求参数，
+false/true 表示显式关闭/开启；不通过环境变量、角色特判或失败后重试切换模式。
+此设置经同一 ModelControlService 写入、单调版本化，并进入 ModelRuntimeSpec 与客户端缓存标识。
+ModelRegistry 只从冻结 Snapshot 构建 `extra_body.enable_thinking`，普通、流式和结构化调用共用。
+该选项只适用于支持此请求字段的 API；不以 endpoint 或模型名称自动探测。
+
+这是 v1 的可选字段扩展。catalog hash 的规范编码省略 null，历史 Snapshot 未声明该字段时仍表示
+Provider 默认，原 hash 不变；显式 false/true 参与 hash，篡改将校验失败。迁移仅增加可空 Profile 列，
+不改写历史 Run/Evaluation Job；存在显式配置时拒绝删除该列，避免静默丢失设置。
+
+### 原有约束
+
 - API Key 或其它 Provider Secret 不得成为 Model Profile、Model Snapshot、Evaluation Job、Case、Report、日志或浏览器字段。
 - Model Assignment 变化只影响后续创建的 Run 与 Evaluation Job；已经创建的工作在恢复、重试、HITL 和 worker 重领后仍使用原 Snapshot。
 - 模块导入不得读取模型角色环境变量、创建模型单例或启动 Provider 资源。环境默认只通过启动期种子写入持久化控制面。

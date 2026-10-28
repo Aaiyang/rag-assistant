@@ -261,7 +261,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--lilac);
+  color: var(--accent-secondary);
   font-size: 8px;
   font-weight: 760;
   letter-spacing: 0.08em;
@@ -299,8 +299,8 @@ onBeforeUnmount(() => {
 }
 
 .artifact-icon {
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.08);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
   font-size: 11px;
 }
 
@@ -335,9 +335,9 @@ onBeforeUnmount(() => {
 }
 
 .artifact-card > button:hover:not(:disabled) {
-  border-color: var(--mint);
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.06);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
 }
 
 .artifact-error {
@@ -379,7 +379,7 @@ onBeforeUnmount(() => {
 }
 
 .artifact-preview-dialog header span {
-  color: var(--mint);
+  color: var(--accent);
   font-size: 8px;
   font-weight: 760;
   letter-spacing: 0.1em;

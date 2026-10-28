@@ -156,7 +156,7 @@ def create_app() -> FastAPI:
             if cleanup_errors:
                 raise BaseExceptionGroup("application shutdown failed", cleanup_errors)
 
-    app = FastAPI(title="SuperMew API", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="问溪 API", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.rate_limiter = rate_limiter
     install_exception_handlers(app)

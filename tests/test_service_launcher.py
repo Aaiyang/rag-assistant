@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import os
 import signal
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import pytest
 
 import backend.launcher as launcher
 
@@ -99,6 +103,7 @@ def test_supervisor_stops_sibling_when_one_service_exits(monkeypatch) -> None:
     assert worker.signals == [signal.SIGTERM]
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Bash wrapper requires POSIX")
 def test_repository_start_script_exposes_the_unified_launcher() -> None:
     completed = subprocess.run(
         [ROOT / "scripts" / "start.sh", "--help"],
@@ -110,4 +115,19 @@ def test_repository_start_script_exposes_the_unified_launcher() -> None:
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert "同时启动 SuperMew API、索引 worker 与 RAG 评估 worker" in completed.stdout
+    assert "同时启动问溪 API、索引 worker 与 RAG 评估 worker" in completed.stdout
+
+
+def test_python_module_exposes_the_unified_launcher() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-m", "backend.launcher", "--help"],
+        cwd=ROOT,
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        check=False,
+        capture_output=True,
+        encoding="utf-8",
+        timeout=10,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "同时启动问溪 API、索引 worker 与 RAG 评估 worker" in completed.stdout

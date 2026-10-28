@@ -6,7 +6,12 @@ import time
 
 import pytest
 
-from backend.sandbox import SandboxExecutionSpec, SandboxLimits
+from backend.sandbox import (
+    SandboxError,
+    SandboxErrorCode,
+    SandboxExecutionSpec,
+    SandboxLimits,
+)
 from backend.sandbox.docker import DockerSandboxAdapter, DockerSandboxConfig
 
 
@@ -62,6 +67,7 @@ import socket
 
 print(f"uid={os.getuid()}")
 print(f"gid={os.getgid()}")
+print(f"parent_pid={os.getppid()}")
 print(f"secret={os.getenv('SUPERMEW_HOST_SECRET')}")
 try:
     open('/etc/supermew-probe', 'w').write('no')
@@ -84,10 +90,24 @@ else:
 
     assert "uid=0" not in result.stdout
     assert "gid=0" not in result.stdout
+    assert "parent_pid=1" in result.stdout.splitlines()
     assert "secret=None" in result.stdout
     assert "rootfs=readonly" in result.stdout
     assert "network=blocked" in result.stdout
     assert adapter.readiness()["active_containers"] == 0
+
+
+def test_real_container_timeout_is_cleaned_up_and_adapter_stays_ready(adapter):
+    with pytest.raises(SandboxError) as raised:
+        adapter.execute(
+            _spec(adapter.config.image, source="import time; time.sleep(60)"),
+            deadline_at=time.monotonic() + 2,
+            cancellation_probe=None,
+        )
+
+    assert raised.value.code == SandboxErrorCode.TIMEOUT
+    assert adapter.readiness()["active_containers"] == 0
+    assert adapter.readiness()["ready"] is True
 
 
 def test_real_container_workspace_is_destroyed_between_invocations(adapter):

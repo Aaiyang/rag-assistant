@@ -187,7 +187,7 @@ def supervise_services(
 def _argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="supermew-start",
-        description="同时启动 SuperMew API、索引 worker 与 RAG 评估 worker",
+        description="同时启动问溪 API、索引 worker 与 RAG 评估 worker",
     )
     parser.add_argument("--host", help="覆盖 API 监听地址")
     parser.add_argument("--port", type=int, help="覆盖 API 监听端口")

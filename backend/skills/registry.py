@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import stat
 import threading
@@ -17,6 +16,8 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
+
+from backend.skills._secure_files import secure_files
 
 
 _KEBAB_NAME = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*\Z")
@@ -135,7 +136,7 @@ def _safe_relative_path(value: str, *, label: str) -> str:
         raise ValueError(f"{label} must be a string")
     if not value or len(value) > 240:
         raise ValueError(f"invalid {label}")
-    if "\x00" in value or "\\" in value:
+    if "\x00" in value or "\\" in value or ":" in value:
         raise ValueError(f"invalid {label}")
     path = Path(value)
     if path.is_absolute():
@@ -350,28 +351,22 @@ def _canonical_manifest(manifest: SkillManifest) -> bytes:
     ).encode("utf-8")
 
 
-_OPEN_COMMON_FLAGS = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
-_OPEN_DIRECTORY_FLAGS = (
-    _OPEN_COMMON_FLAGS | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
-)
-_OPEN_FILE_FLAGS = (
-    _OPEN_COMMON_FLAGS | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
-)
+_files = secure_files()
 
 
 def _require_secure_open_flags() -> None:
-    if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
-        raise SkillRegistryError(
-            "skill registry requires O_DIRECTORY and O_NOFOLLOW support"
-        )
+    try:
+        _files.require_support()
+    except OSError as exc:
+        raise SkillRegistryError(str(exc)) from exc
 
 
 def _is_symlink_at(parent_fd: int, name: str) -> bool:
     try:
-        metadata = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+        mode = _files.stat_mode_at(parent_fd, name)
     except OSError:
         return False
-    return stat.S_ISLNK(metadata.st_mode)
+    return stat.S_ISLNK(mode)
 
 
 def _open_directory_at(
@@ -382,7 +377,7 @@ def _open_directory_at(
     display_path: Path,
 ) -> int:
     try:
-        opened_fd = os.open(name, _OPEN_DIRECTORY_FLAGS, dir_fd=parent_fd)
+        opened_fd = _files.open_directory_at(parent_fd, name)
     except OSError as exc:
         if _is_symlink_at(parent_fd, name):
             raise SkillRegistryError(
@@ -390,12 +385,17 @@ def _open_directory_at(
             ) from exc
         raise SkillRegistryError(f"cannot open {label}: {display_path}") from exc
     try:
-        mode = os.fstat(opened_fd).st_mode
+        mode = _files.mode(opened_fd)
     except OSError as exc:
-        os.close(opened_fd)
+        _files.close(opened_fd)
         raise SkillRegistryError(f"cannot inspect {label}: {display_path}") from exc
+    if stat.S_ISLNK(mode):
+        _files.close(opened_fd)
+        raise SkillRegistryError(
+            f"symlinks are not allowed for {label}: {display_path}"
+        )
     if not stat.S_ISDIR(mode):
-        os.close(opened_fd)
+        _files.close(opened_fd)
         raise SkillRegistryError(f"{label} must be a directory: {display_path}")
     return opened_fd
 
@@ -409,7 +409,7 @@ def _open_regular_file_at(
     display_path: Path,
 ) -> bytes:
     parts = relative.split("/")
-    current_fd = os.dup(base_fd)
+    current_fd = _files.dup(base_fd)
     try:
         current_path = display_path
         for _part in parts:
@@ -422,12 +422,12 @@ def _open_regular_file_at(
                 label=label,
                 display_path=current_path,
             )
-            os.close(current_fd)
+            _files.close(current_fd)
             current_fd = next_fd
 
         filename = parts[-1]
         try:
-            file_fd = os.open(filename, _OPEN_FILE_FLAGS, dir_fd=current_fd)
+            file_fd = _files.open_file_at(current_fd, filename)
         except OSError as exc:
             if _is_symlink_at(current_fd, filename):
                 raise SkillRegistryError(
@@ -436,16 +436,21 @@ def _open_regular_file_at(
             raise SkillRegistryError(f"cannot open {label}: {display_path}") from exc
         try:
             try:
-                metadata = os.fstat(file_fd)
+                mode = _files.mode(file_fd)
+                size = _files.size(file_fd)
             except OSError as exc:
                 raise SkillRegistryError(
                     f"cannot inspect {label}: {display_path}"
                 ) from exc
-            if not stat.S_ISREG(metadata.st_mode):
+            if stat.S_ISLNK(mode):
+                raise SkillRegistryError(
+                    f"symlinks are not allowed for {label}: {display_path}"
+                )
+            if not stat.S_ISREG(mode):
                 raise SkillRegistryError(
                     f"{label} must be a regular file: {display_path}"
                 )
-            if metadata.st_size > max_bytes:
+            if size > max_bytes:
                 raise SkillRegistryError(
                     f"{label} exceeds {max_bytes} bytes: {display_path}"
                 )
@@ -454,7 +459,7 @@ def _open_regular_file_at(
             total = 0
             while total <= max_bytes:
                 try:
-                    chunk = os.read(file_fd, min(65_536, max_bytes + 1 - total))
+                    chunk = _files.read(file_fd, min(65_536, max_bytes + 1 - total))
                 except OSError as exc:
                     raise SkillRegistryError(
                         f"cannot read {label}: {display_path}"
@@ -474,9 +479,9 @@ def _open_regular_file_at(
                 )
             return data
         finally:
-            os.close(file_fd)
+            _files.close(file_fd)
     finally:
-        os.close(current_fd)
+        _files.close(current_fd)
 
 
 class SkillRegistry:
@@ -510,10 +515,14 @@ class SkillRegistry:
         )
         raw_root = Path(root)
         try:
-            root_mode = raw_root.lstat().st_mode
+            root_metadata = raw_root.lstat()
+            root_mode = root_metadata.st_mode
         except OSError as exc:
             raise SkillRegistryError(f"cannot inspect skill root: {raw_root}") from exc
-        if stat.S_ISLNK(root_mode):
+        if stat.S_ISLNK(root_mode) or (
+            getattr(root_metadata, "st_file_attributes", 0)
+            & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        ):
             raise SkillRegistryError("skill root must not be a symlink")
         if not stat.S_ISDIR(root_mode):
             raise SkillRegistryError(f"skill root must be a directory: {raw_root}")
@@ -523,16 +532,18 @@ class SkillRegistry:
             raise SkillRegistryError(f"cannot resolve skill root: {raw_root}") from exc
 
         try:
-            root_fd = os.open(resolved_root, _OPEN_DIRECTORY_FLAGS)
+            root_fd = _files.open_root(resolved_root)
         except OSError as exc:
             raise SkillRegistryError(f"cannot open skill root: {raw_root}") from exc
         try:
             try:
-                opened_root_mode = os.fstat(root_fd).st_mode
+                opened_root_mode = _files.mode(root_fd)
             except OSError as exc:
                 raise SkillRegistryError(
                     f"cannot inspect opened skill root: {raw_root}"
                 ) from exc
+            if stat.S_ISLNK(opened_root_mode):
+                raise SkillRegistryError("skill root must not be a symlink")
             if not stat.S_ISDIR(opened_root_mode):
                 raise SkillRegistryError(f"skill root must be a directory: {raw_root}")
 
@@ -546,7 +557,7 @@ class SkillRegistry:
             records: dict[str, _SkillRecord] = {}
 
             try:
-                entries = sorted(os.listdir(root_fd))
+                entries = sorted(_files.listdir(root_fd))
             except OSError as exc:
                 raise SkillRegistryError(
                     f"cannot list skill root: {resolved_root}"
@@ -555,11 +566,7 @@ class SkillRegistry:
             for entry_name in entries:
                 skill_dir = resolved_root / entry_name
                 try:
-                    entry_mode = os.stat(
-                        entry_name,
-                        dir_fd=root_fd,
-                        follow_symlinks=False,
-                    ).st_mode
+                    entry_mode = _files.stat_mode_at(root_fd, entry_name)
                 except OSError as exc:
                     raise SkillRegistryError(
                         f"cannot inspect skill entry: {skill_dir}"
@@ -652,9 +659,9 @@ class SkillRegistry:
                         pin=pin,
                     )
                 finally:
-                    os.close(skill_fd)
+                    _files.close(skill_fd)
         finally:
-            os.close(root_fd)
+            _files.close(root_fd)
 
         return cls(
             root=resolved_root,

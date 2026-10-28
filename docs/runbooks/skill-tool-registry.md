@@ -21,6 +21,22 @@ uv run alembic upgrade head
 
 ## 启动前验证
 
+文件 Registry 的校验与内容冻结流程在各平台共用。POSIX 使用 `O_DIRECTORY`、
+`O_NOFOLLOW` 与 `dir_fd`；Windows 使用原生目录句柄、相对 `NtCreateFile` 和
+`FILE_OPEN_REPARSE_POINT`，拒绝符号链接、junction 及其他重解析点。Windows 在读取期间
+禁止共享写入或删除，防止路径及内容被替换，成功或失败后都会关闭句柄。
+平台按操作系统显式选择；读取失败不会切换为普通路径读取，也不会跳过安全检查。
+
+Windows PowerShell 可直接运行：
+
+```powershell
+.\.venv\Scripts\python.exe -m backend.tools.registry_cli validate
+.\.venv\Scripts\python.exe -m backend.launcher --port 8000
+```
+
+Windows junction 回归不需要符号链接特权；符号链接专项测试需要 Developer Mode 或创建
+符号链接权限，缺少权限时明确跳过这些专项测试。POSIX 文件描述符竞态测试只在 POSIX 运行。
+
 ```bash
 uv run --frozen python -m backend.tools.registry_cli validate
 uv run --frozen python -m backend.tools.registry_cli list-tools --role user

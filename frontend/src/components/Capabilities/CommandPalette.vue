@@ -367,8 +367,8 @@ watch(resultItems, resetActiveIndex);
   height: 34px;
   place-items: center;
   border-radius: 10px;
-  color: var(--lilac);
-  background: rgba(200, 185, 255, 0.09);
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-secondary-rgb), 0.09);
 }
 
 .command-palette-search {
@@ -439,7 +439,7 @@ watch(resultItems, resetActiveIndex);
 }
 
 .command-palette-option.selected {
-  border-color: rgba(200, 185, 255, 0.24);
+  border-color: rgba(var(--accent-secondary-rgb), 0.24);
 }
 
 .command-palette-option:disabled {
@@ -459,8 +459,8 @@ watch(resultItems, resetActiveIndex);
   height: 38px;
   place-items: center;
   border-radius: 11px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.07);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.07);
 }
 
 .command-option-copy {
@@ -494,7 +494,7 @@ watch(resultItems, resetActiveIndex);
 }
 
 .command-option-state.is-selected {
-  color: var(--lilac);
+  color: var(--accent-secondary);
 }
 
 .command-palette-empty {

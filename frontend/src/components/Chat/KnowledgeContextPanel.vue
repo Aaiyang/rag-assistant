@@ -85,7 +85,7 @@ import ExecutionTimeline from '@/components/Run/ExecutionTimeline.vue';
 import ArtifactShelf from '@/components/Artifacts/ArtifactShelf.vue';
 import type { RunTimelineItem } from '@/events/runEventReducer';
 import type { RetrievedChunk } from '@/types/chat';
-import emptyEvidence from '@/assets/images/empty-evidence.webp';
+import emptyEvidence from '@/assets/images/xiaoxi-mascot.webp';
 
 interface RunStepView {
   key: string;
@@ -154,7 +154,7 @@ const runSteps = computed<RunStepView[]>(() => {
     return [
       {
         key: 'answer',
-        label: isRunning.value ? '正在连接喵喵 Agent' : '直接回答已完成',
+        label: isRunning.value ? '正在连接小溪 Agent' : '直接回答已完成',
         detail: isRunning.value ? '准备理解问题与选择工具' : '本次未产生检索轨迹',
       },
     ];

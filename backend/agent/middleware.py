@@ -811,16 +811,31 @@ class DynamicContextMiddleware(AgentMiddleware):
             )
             if final_response:
                 content += "\n\n" + _FINAL_RESPONSE_INSTRUCTION
-            message = SystemMessage(
-                content=content,
-                additional_kwargs={
-                    _DYNAMIC_CONTEXT_MARKER: True,
-                    _ACTIVE_SKILL_MARKER: active_skill,
+            base_message = request.system_message or SystemMessage(content="")
+            combined_content: str | list[str | dict]
+            if isinstance(base_message.content, str):
+                combined_content = (
+                    f"{base_message.content}\n\n{content}"
+                    if base_message.content
+                    else content
+                )
+            else:
+                combined_content = [
+                    *base_message.content,
+                    {"type": "text", "text": content},
+                ]
+            message = base_message.model_copy(
+                update={
+                    "content": combined_content,
+                    "additional_kwargs": {
+                        **base_message.additional_kwargs,
+                        _DYNAMIC_CONTEXT_MARKER: True,
+                        _ACTIVE_SKILL_MARKER: active_skill,
+                    },
                 },
             )
             estimated = estimate_request_tokens(
                 [message, *request.messages],
-                system_message=request.system_message,
                 tools=visible_tools,
             )
             return message, estimated
@@ -871,7 +886,12 @@ class DynamicContextMiddleware(AgentMiddleware):
                 active_skill_preserved=active_skill,
                 estimated_tokens=estimated,
             )
-        return request.override(messages=[dynamic_message, *request.messages])
+        # Keep one leading system message for OpenAI-compatible providers.
+        # The base prompt remains an unchanged prefix of the atomic context.
+        return request.override(
+            system_message=None,
+            messages=[dynamic_message, *request.messages],
+        )
 
     def wrap_model_call(self, request, handler):
         return handler(self._override(request))

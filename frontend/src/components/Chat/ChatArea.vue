@@ -136,10 +136,10 @@ const generationStatus = computed(() => {
   if (chatStore.currentRunStatus === 'creating') return '正在创建运行';
   if (['queued', 'pending'].includes(chatStore.currentRunStatus || '')) return '运行已排队';
   if (chatStore.currentRunStatus === 'cancelling') return '正在终止运行';
-  if (chatStore.currentRunStatus === 'running') return '喵喵正在生成';
+  if (chatStore.currentRunStatus === 'running') return '小溪正在生成';
   if (chatStore.currentRunStatus === 'waiting_input') return '等待你的补充';
   if (chatStore.currentPendingHitl) return '等待你的补充';
-  return '喵喵在线';
+  return '小溪在线';
 });
 
 const contextSyncLabel = computed(() => {

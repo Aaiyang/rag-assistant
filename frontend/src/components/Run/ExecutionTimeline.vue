@@ -114,8 +114,8 @@ const guardrailClass = (decision: string | null) => [
 }
 
 .execution-node.is-running {
-  border-color: rgba(168, 246, 209, 0.35);
-  color: var(--mint);
+  border-color: rgba(var(--accent-rgb), 0.35);
+  color: var(--accent);
 }
 
 .execution-node.is-completed {
@@ -175,7 +175,7 @@ const guardrailClass = (decision: string | null) => [
   padding: 2px 5px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  color: var(--lilac);
+  color: var(--accent-secondary);
   background: var(--surface-soft);
   font-size: var(--font-micro);
   text-overflow: ellipsis;

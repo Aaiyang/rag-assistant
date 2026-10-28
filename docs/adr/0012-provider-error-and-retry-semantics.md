@@ -22,6 +22,12 @@ Provider 故障与健康检索后的领域结论具有不同语义：前者需�
 
 重试所有权遵循“每次外部调用只有一层”的不变量：OpenAI-compatible 模型 Adapter 显式设置原生 `timeout` 且 `max_retries=0`，由 `ProviderExecutor` 独占分类和重试。Planner、Grader、Rewrite 等结构化、未发布输出的模型调用可以有限重试；答案模型可能在失败前已经发布 delta，因此 Runtime middleware 固定 `max_attempts=1`，不得重试整个答案流。
 
+OpenAI-compatible 的 Planner、Grader、Rewrite 与 Evaluator 结构化调用显式使用
+`function_calling`，通过固定 schema 的 tool arguments 返回并由 Pydantic 校验；不依赖
+SDK 的默认 `json_schema` / `response_format` 协议。服务支持工具调用不代表同样支持原生
+JSON Schema 输出。协议不支持或输出校验失败仍通过同一 Provider seam 报错，不自动切换
+协议、不解析自由文本作为成功，也不改变 Model Snapshot、重试所有者或 deadline。
+
 RAG Module 采用下列语义：
 
 1. Embedding 与向量检索耗尽重试后抛出 typed `ProviderError`，不得返回空文档。

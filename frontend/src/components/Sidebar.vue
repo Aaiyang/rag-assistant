@@ -2,18 +2,18 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="logo-icon" aria-hidden="true">
-        <img :src="superMewMark" class="brand-mark-image" alt="" />
+        <img :src="wenxiMark" class="brand-mark-image" alt="" />
       </div>
       <div class="brand-copy">
-        <h1>喵喵助手</h1>
-        <span>Knowledge Copilot</span>
+        <h1>问溪</h1>
+        <span>循知而行，问有所归。</span>
       </div>
     </div>
 
     <div class="workspace-switcher">
       <span class="workspace-orb" aria-hidden="true"></span>
       <span class="workspace-copy">
-        <strong>SuperMew 知识空间</strong>
+        <strong>问溪 · 知识空间</strong>
         <small>{{ workspaceMeta }}</small>
       </span>
       <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
@@ -119,7 +119,7 @@
         </p>
 
         <div v-if="!recentThreads.length" class="recent-empty">
-          还没有历史对话，问喵喵一个问题吧。
+          还没有历史对话，问小溪一个问题吧。
         </div>
       </div>
     </template>
@@ -178,7 +178,7 @@ import { useChatStore } from '@/stores/chat';
 import { useThreadStore } from '@/stores/threads';
 import { useCapabilityStore } from '@/stores/capabilities';
 import type { ThreadListItem } from '@/types/threads';
-import superMewMark from '@/assets/images/supermew-mark.png';
+import wenxiMark from '@/assets/images/wenxi-mark.png';
 
 defineProps<{
   theme: 'dark' | 'light';

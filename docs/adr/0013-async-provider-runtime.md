@@ -16,7 +16,7 @@ RAG Module 仍以同步 LangGraph 节点和同步 `PostgresSaver` 运行。持�
 建立 `ProviderRuntime` 深 Module，集中拥有 Provider 生命周期，并在内部放置以下 seam：
 
 1. `ProviderLoopBridge` 拥有进程级专用 event loop 和后台线程。异步 Provider Adapter、查询微批任务和 `httpx.AsyncClient` 只在该 loop 创建、调用和关闭。
-2. `EmbeddingRuntime` 提供 async query/document Interface。查询固定使用 `encode_query()` 语义，文档固定使用 `encode_document()`；Implementation 隐藏 lazy model load、专用有界 executor、并发 gate、10–30ms 可配置微批、LRU、同 key inflight 去重、向量形状校验、warmup 和 readiness。
+2. `EmbeddingRuntime` 提供 async query/document Interface。本地模式查询固定使用 `encode_query()`，文档固定使用 `encode_document()`；显式 `openai-compatible` 模式使用同一模型的远程 `/embeddings`。Implementation 统一拥有并发 gate、可配置微批、隔离 LRU、同 key inflight 去重、向量形状校验、warmup 和 readiness。本地模式隐藏 lazy model load 与有界 executor；远程模式的 `HttpxEmbeddingEncoder` 仅负责单次 HTTP、响应预算与按 index 排序，成功向量经 L2 归一化后进入同一缓存路径，不在失败时切换后端。
 3. `RerankerProvider` 由 `HttpxRerankerAdapter` 与 `DisabledRerankerAdapter` 两个真实 Adapter 实现。HTTP Adapter 复用单一 `AsyncClient`，transport retries 固定为 0；`ProviderExecutor.acall()` 继续独占 taxonomy、deadline、取消、`Retry-After` 和有限重试。
 4. 同步 checkpoint 图仅通过明确的 `ProviderLoopBridge` Adapter 调用 Provider Runtime。同步调用只能来自无 running event loop 的 worker thread，并通过 `run_coroutine_threadsafe()` 投递；禁止每次调用 `asyncio.run()`，禁止跨 loop 使用 AsyncClient。
 5. Rerank 的条件跳过、输入上限、fallback 和 trace metadata 仍由 RAG Module 拥有。Provider Adapter 只负责可靠评分；失败保留召回排序，且不得应用 rerank score 阈值。
@@ -27,6 +27,7 @@ RAG Module 仍以同步 LangGraph 节点和同步 `PostgresSaver` 运行。持�
 
 - FastAPI 主 event loop 不执行本地 Embedding、同步 Milvus RPC、文档解析、文件 `fsync` 或同步 Rerank HTTP。
 - `httpx.AsyncClient` 只属于 Provider loop；多次调用复用同一 client，shutdown 必须关闭且不得遗留 task。
+- 远程 Embedding 的同 key 请求可共享批次；只有所有等待者均取消或超时后才取消该批次 HTTP，单个调用取消不得影响其他调用。远程索引身份包含 provider、基址哈希、模型、部署标签、维度与归一化方式，Secret 不影响身份；切换编码方式必须重新构建索引。远程部署标签不构成服务商固定权重的保证。
 - 每次外部调用只有一个重试所有者。HTTP transport、SDK、bridge 和 RAG caller 不得叠加重试。
 - Provider deadline 包含 semaphore/queue 等待时间；取消必须主动取消在途 coroutine 或 bridge future。
 - 已进入 PyTorch/CUDA 底层 encode 后无法保证硬中止。取消只停止等待与结果交付；有界 queue、executor 和并发 gate 必须限制尾部工作。

@@ -40,7 +40,7 @@ describe('capability form payloads', () => {
         method: 'POST',
         inputSchema:
           '{"type":"object","properties":{"query":{"type":"string"}},"additionalProperties":false}',
-        staticHeaders: '{"X-Client":"SuperMew"}',
+        staticHeaders: '{"X-Client":"Wenxi"}',
         secretHeaders: '{"Authorization":"RELEASE_API_TOKEN"}',
         requiredRoles: 'admin',
         requiresApproval: true,
@@ -52,7 +52,7 @@ describe('capability form payloads', () => {
     ).toMatchObject({
       endpoint: 'https://api.vendor.dev/v1/releases',
       method: 'POST',
-      static_headers: { 'X-Client': 'SuperMew' },
+      static_headers: { 'X-Client': 'Wenxi' },
       secret_headers: { Authorization: 'RELEASE_API_TOKEN' },
       required_roles: ['admin'],
       requires_approval: true,

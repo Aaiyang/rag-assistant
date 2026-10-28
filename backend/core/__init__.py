@@ -1,4 +1,4 @@
-"""SuperMew 的配置、错误和运行时基础设施。"""
+"""问溪的配置、错误和运行时基础设施。"""
 
 from backend.core.errors import AppError, ErrorCode
 from backend.core.settings import AppSettings, get_settings

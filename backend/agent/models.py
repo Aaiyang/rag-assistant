@@ -30,6 +30,7 @@ class ModelSpec:
     provider: str = "openai"
     base_url: str = ""
     timeout_seconds: float = 30.0
+    enable_thinking: bool | None = None
     temperature: float = 0.0
     supports_stream: bool = True
     supports_structured_output: bool = True
@@ -44,6 +45,7 @@ class ModelSpec:
             self.name,
             self.base_url,
             self.timeout_seconds,
+            self.enable_thinking,
             self.temperature,
             self.supports_stream,
             self.supports_structured_output,
@@ -157,6 +159,7 @@ class ModelRegistry:
             provider=runtime.provider,
             base_url=runtime.base_url,
             timeout_seconds=runtime.timeout_seconds,
+            enable_thinking=runtime.enable_thinking,
             temperature=requirement.temperature,
             supports_stream=runtime.supports_stream,
             supports_structured_output=runtime.supports_structured_output,
@@ -191,6 +194,11 @@ class ModelRegistry:
             cached = self._models.get(spec.cache_key)
             if cached is not None:
                 return cached
+            provider_options = (
+                {"extra_body": {"enable_thinking": spec.enable_thinking}}
+                if spec.enable_thinking is not None
+                else {}
+            )
             model = self.initializer(
                 model=spec.name,
                 model_provider=spec.provider,
@@ -200,6 +208,7 @@ class ModelRegistry:
                 stream_usage=True,
                 max_retries=0,
                 timeout=spec.timeout_seconds,
+                **provider_options,
             )
             self._models[spec.cache_key] = model
             return model

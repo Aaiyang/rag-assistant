@@ -78,16 +78,17 @@ test('renders the unauthenticated application shell and registration mode', asyn
   });
   await page.goto('/');
 
-  await expect(page).toHaveTitle('喵喵助手 · Knowledge Copilot');
+  await expect(page).toHaveTitle('问溪 · 循知而行，问有所归。');
   await expect(page.getByRole('status')).toContainText('正在恢复登录状态');
-  await expect(page.getByRole('heading', { name: '登录喵喵助手' })).toBeHidden();
+  await expect(page.getByRole('heading', { name: '登录问溪' })).toBeHidden();
   releaseRefresh();
-  await expect(page.getByRole('heading', { name: '登录喵喵助手' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '登录问溪' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /循知而行，\s*问有所归。/ })).toBeVisible();
   await expect(page.getByLabel('用户名')).toBeEditable();
   await expect(page.getByLabel('密码')).toBeEditable();
 
   await page.getByRole('button', { name: '还没有账号？创建一个' }).click();
-  await expect(page.getByRole('heading', { name: '注册喵喵助手' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '注册问溪' })).toBeVisible();
   await expect(page.getByLabel('账号角色')).toBeVisible();
 });
 
@@ -173,8 +174,14 @@ test('projects a durable Run event stream into the chat UI', async ({ page }) =>
   await page.getByLabel('密码').fill('safe-password');
   await page.getByRole('button', { name: '进入工作台' }).click();
 
-  const input = page.getByPlaceholder(/和喵喵说点什么/);
+  const input = page.getByPlaceholder(/和小溪说点什么/);
   await expect(input).toBeVisible();
+  await expect(page.getByText('我是小溪，陪你从一个问题，找到清晰的答案。')).toBeVisible();
+  const mascot = page.getByRole('img', { name: '小溪，问溪的溪水精灵吉祥物' });
+  await expect(mascot).toBeVisible();
+  await expect
+    .poll(() => mascot.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
   await input.fill('验证持久化运行');
   await page.getByRole('button', { name: '发送消息' }).click();
 
@@ -208,8 +215,8 @@ test('silently restores an HttpOnly refresh session without rendering the login 
 
   await page.goto('/');
 
-  await expect(page.getByPlaceholder(/和喵喵说点什么/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: '登录喵喵助手' })).toBeHidden();
+  await expect(page.getByPlaceholder(/和小溪说点什么/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: '登录问溪' })).toBeHidden();
   await expect(page.getByText('restored-user')).toBeVisible();
   await expect.poll(() => threadAuthorization).toBe('Bearer restored-token');
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual(['supermew-theme']);
@@ -271,7 +278,7 @@ test('returns from history to the chat draft without creating an empty Thread', 
   await page.getByRole('button', { name: '智能对话', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: '历史对话' })).toBeHidden();
-  await expect(page.getByPlaceholder(/和喵喵说点什么/)).toBeVisible();
+  await expect(page.getByPlaceholder(/和小溪说点什么/)).toBeVisible();
   expect(createThreadCalls).toBe(0);
 });
 
@@ -296,12 +303,12 @@ test('keeps a failed logout locally revoked across a page reload', async ({ page
   await page.goto('/');
   await expect(page.getByText('restored-user')).toBeVisible();
   await page.getByRole('button', { name: '退出登录' }).click();
-  await expect(page.getByRole('heading', { name: '登录喵喵助手' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '登录问溪' })).toBeVisible();
   await expect.poll(() => logoutCalls).toBe(1);
 
   await page.reload();
 
-  await expect(page.getByRole('heading', { name: '登录喵喵助手' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '登录问溪' })).toBeVisible();
   await expect.poll(() => logoutCalls).toBe(2);
   expect(refreshCalls).toBe(1);
   expect(

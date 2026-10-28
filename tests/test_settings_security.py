@@ -69,6 +69,33 @@ def make_settings(
 
 
 class SettingsSecurityTests(unittest.TestCase):
+    def test_remote_embedding_requires_explicit_https_base_url_and_key(self):
+        settings = make_settings(secret="s" * 40)
+        settings.embedding.provider = "openai-compatible"
+        settings.embedding.api_key = SecretStr("")
+        with self.assertRaisesRegex(ValueError, "EMBEDDING_API_KEY"):
+            settings.validate_startup()
+        settings.embedding.api_key = SecretStr("separate-embedding-key")
+        for base_url in (
+            "",
+            "http://api.example.test/v1",
+            "https://key@api.example.test/v1",
+            "https://api.example.test/v1?key=secret",
+        ):
+            settings.embedding.base_url = base_url
+            with (
+                self.subTest(base_url=base_url),
+                self.assertRaisesRegex(ValueError, "EMBEDDING_BASE_URL"),
+            ):
+                settings.validate_startup()
+        settings.embedding.base_url = "https://api.example.test/v1/"
+        settings.validate_startup()
+        self.assertEqual(
+            "https://api.example.test/v1/embeddings", settings.embedding.endpoint
+        )
+        self.assertNotIn("separate-embedding-key", str(settings.redacted_dict()))
+        self.assertNotIn("api.example.test", str(settings.redacted_dict()))
+
     def test_agent_model_call_budget_defaults_to_five_calls(self):
         self.assertEqual(5, AgentSettings(_env_file=None).max_model_calls)
 

@@ -226,6 +226,111 @@ uv run --no-sync python -m backend.auth.cleanup
 evidence；服务端先判 expired，过期行不能触发用户级 replay 撤销。完整操作说明见
 `docs/runbooks/auth-token-lifecycle.md`。
 
+## 开发 Compose 对象存储排障
+
+开发 `docker-compose.yml` 使用 RustFS。在仓库根目录的 `.env` 或进程环境中设置
+`RUSTFS_ACCESS_KEY` 与 `RUSTFS_SECRET_KEY`，Compose 将其同时传给 RustFS、桶初始化
+服务及 Milvus 的 `MINIO_ACCESS_KEY_ID` / `MINIO_SECRET_ACCESS_KEY`。不得把真实值写入
+仓库或诊断日志。初始化服务创建 Milvus 默认使用的 `a-bucket`；已有数据时不要随意修改
+桶名、`rootPath` 或删除卷。
+
+在仓库根目录运行以下命令核对配置和启动状态：
+
+```bash
+docker compose config --quiet
+docker compose up -d
+docker compose ps -a
+docker compose logs --tail 100 standalone create-bucket
+```
+
+期望 `standalone` 为 `healthy`，`create-bucket` 为 `Exited (0)`。如果 Milvus 日志出现
+`failed to check blob bucket exist` 和 `Access Denied`，先检查 Milvus 是否收到上述两个
+凭据变量且与 RustFS 一致，再检查桶名；延长健康检查等待时间不能解决认证失败。
+修改 Compose 的环境变量后需用 `docker compose up -d` 重建对应容器，单纯 `restart`
+不会应用新环境变量。RustFS 健康而 Milvus 失败时，不应通过清空数据卷处理。
+
+## 远程嵌入 API
+
+远程模式复用同一个 EmbeddingRuntime、query/document Interface、ProviderExecutor、并发 gate、
+批处理和隔离缓存，不加载本地模型，也不在失败时降级成本地模型。在根目录 `.env` 显式配置：
+
+```dotenv
+EMBEDDING_PROVIDER=openai-compatible
+EMBEDDING_BASE_URL=https://your-embedding-api.example/v1
+EMBEDDING_API_KEY=<服务端密钥>
+EMBEDDING_MODEL=BAAI/bge-m3
+EMBEDDING_MODEL_REVISION=provider-managed-v1
+DENSE_EMBEDDING_DIM=1024
+EMBEDDING_WARMUP_ON_START=true
+EMBEDDING_TIMEOUT_SECONDS=30
+```
+
+基址必须为无 userinfo、query、fragment 的 HTTPS URL，应用会追加 `/embeddings`；模型需要
+支持字符串数组输入和 `encoding_format=float`。不会自动复用 `BASE_URL` / `ARK_API_KEY`，
+如使用同一服务，需将它们的值分别填入上述两个专用字段。密钥只保存在服务端环境中。
+
+查询和文档使用同一模型，按响应 `index` 恢复顺序，校验数量、维度与有限数值后进行 L2
+归一化。HTTP 不跟随重定向，只有 ProviderExecutor 负责重试；所有等待者取消或超时后，
+对应批次的在途 HTTP 会被取消。正常关闭也会释放 client 和批处理任务。
+
+`EMBEDDING_MODEL_REVISION` 在远程模式是运维部署标签，不会作为 API 参数，也不保证服务商
+固定权重。服务商切换模型版本时需更新此标签并重新构建文档索引。索引身份包含 provider、
+基址的哈希、模型、部署标签、维度和归一化方式；不含 Key。与本地模式切换时同样需要重建
+已有文档索引，不可混用旧向量。
+
+停止并重启 API 与两个 worker（仓库根目录 PowerShell）：
+
+```powershell
+Remove-Item Env:EMBEDDING_WARMUP_ON_START -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe -m backend.launcher --port 8000
+```
+
+预热会真实调用远程服务，消耗服务商额度。模型可用且其他依赖正常时 `/health/ready` 返回
+200，`provider_runtime.embedding.ready=true`；远程模式的 `model_loaded=false` 表示未加载
+本地权重，不影响就绪判定。无需设置 `HF_ENDPOINT` 或下载模型；这些只影响本地模式。
+
+离线回归使用 MockTransport，不发送真实文本或 Secret：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q tests/test_remote_embedding.py tests/test_embedding_runtime.py
+```
+
+## 开发环境模型下载排障
+
+本地 Embedding 默认使用固定 revision 的 `BAAI/bge-m3`。API 与两个 worker 都会在
+`EMBEDDING_WARMUP_ON_START=true` 时加载模型。首次下载应单独完成，避免把网络下载放进
+Provider 的启动预热 deadline。
+
+如果出现 `FileMetadataError: Distant resource does not seem to be on huggingface.co`，
+检查 `HF_ENDPOINT`。Hub 客户端需要模型响应中的 commit、ETag 和文件大小；镜像返回跨域
+重定向而未提供这些元数据时，浏览器能打开链接也不代表客户端能下载。使用可访问且保留
+Hub 元数据的源，例如 `.env` 中的 `HF_ENDPOINT=https://huggingface.co`。不关闭 TLS 校验，
+也不通过修改已安装依赖跳过元数据校验。
+
+仅需联调页面和普通 API 时，在本地 `.env` 中设置 `EMBEDDING_WARMUP_ON_START=false`
+并重启。`/health/live` 应返回 200；未加载模型时 `/health/ready` 仍返回 503，RAG 与
+文档入库仍依赖模型可用。
+
+以下 PowerShell 命令从仓库根目录运行，为 `.env.example` 中的默认模型和 revision
+准备 Sentence Transformers 所需文件（约 2.29 GB，不下载 ONNX、图片或其他权重）。
+如果更改了模型或 revision，需同步命令并核对该模型要求的文件：
+
+```powershell
+$env:HF_ENDPOINT="https://huggingface.co"
+.\.venv\Scripts\hf.exe download BAAI/bge-m3 `
+  config.json config_sentence_transformers.json modules.json sentence_bert_config.json `
+  1_Pooling/config.json tokenizer.json tokenizer_config.json special_tokens_map.json `
+  sentencepiece.bpe.model pytorch_model.bin `
+  --revision 5617a9f61b028005a4858fdac845db406aefb181
+```
+
+`hf.exe` 不会自动读取项目 `.env`，因此上面显式设置了下载源。命令使用默认 Hub 缓存，
+不要以 `--local-dir` 把缓存变成另一套路径而仍让应用读取原模型 ID。
+下载完成后将 `.env` 中 `EMBEDDING_WARMUP_ON_START` 改回 `true`；如果当前终端存在同名
+临时变量，执行 `Remove-Item Env:EMBEDDING_WARMUP_ON_START`，然后重启启动器。
+本地 CPU 加载及首次编码若超过 `EMBEDDING_TIMEOUT_SECONDS`，应按实际耗时显式调整
+该预算，不能把模型加载失败当成健康空检索。
+
 ## 生产 Compose 凭据
 
 `docker-compose.prod.yml` 不提供数据库或对象存储默认凭据。运行前必须通过部署 Secret

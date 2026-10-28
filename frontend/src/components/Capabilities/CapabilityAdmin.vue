@@ -202,7 +202,7 @@
                   type="number"
                   min="0.001"
                   max="120"
-                  step="0.1"
+                  step="any"
                 />
               </label>
               <label class="form-field">
@@ -232,7 +232,7 @@
                   type="number"
                   min="0.001"
                   max="1000000000"
-                  step="1"
+                  step="any"
                 />
               </label>
               <label class="form-field">
@@ -651,7 +651,7 @@
                   v-model="toolDraft.staticHeaders"
                   rows="5"
                   spellcheck="false"
-                  placeholder='{"X-Client":"SuperMew"}'
+                  placeholder='{"X-Client":"Wenxi"}'
                 ></textarea>
                 <small>Authorization、X-API-Key 等敏感 Header 必须使用右侧 Secret 引用。</small>
               </label>
@@ -1048,7 +1048,7 @@ onMounted(() => {
 
 .eyebrow,
 .section-kicker {
-  color: var(--mint);
+  color: var(--accent);
   font-size: var(--font-micro);
   font-weight: 760;
   letter-spacing: 0.14em;
@@ -1092,13 +1092,13 @@ onMounted(() => {
 }
 
 .primary-button {
-  color: var(--mint-ink);
-  background: var(--mint);
+  color: var(--accent-ink);
+  background: var(--accent);
 }
 
 .primary-button.is-lilac {
-  color: #161126;
-  background: var(--lilac);
+  color: var(--accent-ink);
+  background: var(--accent-secondary);
 }
 
 .secondary-button {
@@ -1162,7 +1162,7 @@ onMounted(() => {
 
 .loading-state > i,
 .empty-tools > i {
-  color: var(--mint);
+  color: var(--accent);
   font-size: 22px;
 }
 
@@ -1213,15 +1213,15 @@ onMounted(() => {
 
 .summary-icon.is-mint,
 .provider-icon {
-  color: var(--mint);
+  color: var(--accent);
   background: rgba(112, 228, 183, 0.08);
 }
 
 .summary-icon.is-lilac,
 .provider-icon.is-lilac,
 .identity-icon.is-lilac {
-  color: var(--lilac);
-  background: rgba(200, 185, 255, 0.08);
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-secondary-rgb), 0.08);
 }
 
 .summary-grid small,
@@ -1365,7 +1365,7 @@ onMounted(() => {
 }
 
 .switch-button.active > span {
-  background: var(--mint-strong);
+  background: var(--accent-strong);
 }
 
 .switch-button.active > span::after {
@@ -1466,7 +1466,7 @@ onMounted(() => {
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
-  border-color: rgba(168, 246, 209, 0.38);
+  border-color: rgba(var(--accent-rgb), 0.38);
 }
 
 .form-field small,
@@ -1495,7 +1495,7 @@ onMounted(() => {
 .toggle-field input,
 .tool-picker input {
   margin-top: 3px;
-  accent-color: var(--mint-strong);
+  accent-color: var(--accent-strong);
 }
 
 .toggle-field strong,
@@ -1594,7 +1594,7 @@ onMounted(() => {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  color: var(--mint);
+  color: var(--accent);
   background: rgba(112, 228, 183, 0.07);
 }
 
@@ -1631,13 +1631,13 @@ onMounted(() => {
 
 .tag-list span,
 .method-chip {
-  color: var(--lilac);
-  background: rgba(200, 185, 255, 0.06);
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-secondary-rgb), 0.06);
 }
 
 .tag-list span {
   padding: 4px 6px;
-  border: 1px solid rgba(200, 185, 255, 0.16);
+  border: 1px solid rgba(var(--accent-secondary-rgb), 0.16);
   border-radius: 7px;
   font-size: var(--font-micro);
 }

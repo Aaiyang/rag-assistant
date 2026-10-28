@@ -88,6 +88,7 @@ def test_admin_can_create_and_assign_profiles():
                 "model_name": "answer-v2",
                 "base_url": "https://models.example.test/v1",
                 "timeout_seconds": 30,
+                "enable_thinking": False,
                 "supports_stream": True,
                 "supports_structured_output": True,
                 "enabled": True,
@@ -102,6 +103,7 @@ def test_admin_can_create_and_assign_profiles():
     assert assigned.status_code == 200
     assert fake.created[0]["username"] == "alice"
     assert fake.created[0]["model_name"] == "answer-v2"
+    assert fake.created[0]["enable_thinking"] is False
     assert fake.assigned == [
         {
             "username": "alice",

@@ -1452,15 +1452,15 @@ onUnmounted(() => {
 
 .primary-button,
 .run-button {
-  color: #111820;
-  background: linear-gradient(135deg, var(--mint), var(--lilac));
-  box-shadow: 0 10px 24px rgba(116, 225, 183, 0.12);
+  color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.12);
 }
 
 html[data-theme='light'] .primary-button,
 html[data-theme='light'] .run-button {
   color: white;
-  background: linear-gradient(135deg, var(--mint-strong), var(--lilac-strong));
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent-secondary-strong));
 }
 
 .secondary-button {
@@ -1542,8 +1542,8 @@ html[data-theme='light'] .run-button {
   flex: 0 0 auto;
   place-items: center;
   border-radius: 10px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.08);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 .overview-grid small,
@@ -1586,7 +1586,7 @@ html[data-theme='light'] .run-button {
 }
 
 .section-kicker {
-  color: var(--mint);
+  color: var(--accent);
   font-size: var(--font-caption);
   font-weight: 780;
   letter-spacing: 0.13em;
@@ -1694,8 +1694,8 @@ html[data-theme='light'] .run-button {
   flex: 0 0 auto;
   place-items: center;
   border-radius: 8px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.07);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.07);
   font-size: var(--font-small);
 }
 
@@ -1704,7 +1704,7 @@ html[data-theme='light'] .run-button {
 }
 
 .runtime-role-icon.is-grader {
-  color: var(--lilac);
+  color: var(--accent-secondary);
 }
 
 .runtime-role-icon.is-evaluator {
@@ -1833,7 +1833,7 @@ html[data-theme='light'] .run-button {
 
 .job-card:hover,
 .job-card.active {
-  border-color: rgba(168, 246, 209, 0.23);
+  border-color: rgba(var(--accent-rgb), 0.23);
   background: var(--surface-hover);
   transform: translateX(2px);
 }
@@ -1874,7 +1874,7 @@ html[data-theme='light'] .run-button {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--mint), var(--lilac));
+  background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
 }
 
 .job-progress-row small,
@@ -1922,7 +1922,7 @@ html[data-theme='light'] .run-button {
 }
 
 .job-empty i {
-  color: var(--mint);
+  color: var(--accent);
   font-size: 16px;
 }
 
@@ -1958,8 +1958,8 @@ html[data-theme='light'] .run-button {
   height: 48px;
   place-items: center;
   border-radius: 15px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.08);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
   font-size: 18px;
 }
 
@@ -2050,7 +2050,7 @@ html[data-theme='light'] .run-button {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--mint), var(--lilac));
+  background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
   transition: width 300ms ease;
 }
 
@@ -2123,7 +2123,7 @@ html[data-theme='light'] .run-button {
 }
 
 .experiment-tabs button.active {
-  border-bottom-color: var(--mint);
+  border-bottom-color: var(--accent);
   color: var(--text);
 }
 
@@ -2341,19 +2341,19 @@ html[data-theme='light'] .run-button {
 
 .trend-chart line.trend-reference.is-baseline,
 .trend-legend i.is-baseline {
-  stroke: var(--mint);
-  background: var(--mint);
+  stroke: var(--accent);
+  background: var(--accent);
 }
 
 .trend-chart line.trend-reference.is-baseline_threshold,
 .trend-legend i.is-baseline_threshold {
-  stroke: var(--lilac);
-  background: var(--lilac);
+  stroke: var(--accent-secondary);
+  background: var(--accent-secondary);
 }
 
 .trend-chart polyline {
   fill: none;
-  stroke: var(--mint);
+  stroke: var(--accent);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.4;
@@ -2362,7 +2362,7 @@ html[data-theme='light'] .run-button {
 
 .trend-chart circle {
   fill: var(--surface-strong);
-  stroke: var(--mint);
+  stroke: var(--accent);
   stroke-width: 0.8;
   vector-effect: non-scaling-stroke;
 }
@@ -2623,7 +2623,7 @@ html[data-theme='light'] .run-button {
 }
 
 .case-empty > i {
-  color: var(--mint);
+  color: var(--accent);
   font-size: 18px;
 }
 
@@ -2738,7 +2738,7 @@ html[data-theme='light'] .run-button {
 .detail-label {
   display: block;
   margin-bottom: 5px;
-  color: var(--mint);
+  color: var(--accent);
   font-size: var(--font-micro);
   font-weight: 760;
   letter-spacing: 0.09em;
@@ -2754,9 +2754,9 @@ html[data-theme='light'] .run-button {
 
 .judge-reason {
   padding: 9px;
-  border-left: 2px solid var(--lilac);
+  border-left: 2px solid var(--accent-secondary);
   border-radius: 0 8px 8px 0;
-  background: rgba(200, 185, 255, 0.05);
+  background: rgba(var(--accent-secondary-rgb), 0.05);
 }
 
 .case-detail-grid {
@@ -2845,8 +2845,8 @@ html[data-theme='light'] .run-button {
   height: 23px;
   place-items: center;
   border-radius: 7px;
-  color: var(--lilac);
-  background: rgba(200, 185, 255, 0.07);
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-secondary-rgb), 0.07);
   font-size: var(--font-micro);
 }
 
@@ -2953,10 +2953,10 @@ html[data-theme='light'] .run-button {
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border: 1px dashed rgba(168, 246, 209, 0.27);
+  border: 1px dashed rgba(var(--accent-rgb), 0.27);
   border-radius: 11px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.04);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.04);
   cursor: pointer;
 }
 
@@ -3032,7 +3032,7 @@ html[data-theme='light'] .dataset-editor textarea {
 }
 
 .dataset-editor textarea:focus {
-  border-color: rgba(168, 246, 209, 0.35);
+  border-color: rgba(var(--accent-rgb), 0.35);
 }
 
 .dataset-preview {

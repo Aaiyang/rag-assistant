@@ -96,6 +96,7 @@ class ModelControlService:
         supports_stream: bool,
         supports_structured_output: bool,
         enabled: bool = True,
+        enable_thinking: bool | None = None,
     ) -> ModelProfileRecord:
         if provider != "openai":
             raise AppError(
@@ -116,6 +117,7 @@ class ModelControlService:
             enabled=enabled,
             source="user",
             username=username,
+            enable_thinking=enable_thinking,
         )
 
     def update_profile(
@@ -131,6 +133,7 @@ class ModelControlService:
         supports_stream: bool,
         supports_structured_output: bool,
         enabled: bool,
+        enable_thinking: bool | None = None,
     ) -> ModelProfileRecord:
         if provider != "openai":
             raise AppError(
@@ -151,6 +154,7 @@ class ModelControlService:
             supports_structured_output=supports_structured_output,
             enabled=enabled,
             username=username,
+            enable_thinking=enable_thinking,
         )
 
     def delete_profile(self, *, username: str, profile_id: str) -> None:

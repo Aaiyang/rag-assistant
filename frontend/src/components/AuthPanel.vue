@@ -3,10 +3,10 @@
     <div class="auth-showcase">
       <div class="auth-showcase-badge">
         <i class="fa-solid fa-sparkles"></i>
-        <span>SuperMew Knowledge Copilot</span>
+        <span>问溪 · WENXI</span>
       </div>
-      <h2>让每一份知识<br />都有清晰的回声。</h2>
-      <p>混合检索、并行 Agent、证据精排与可追溯引用， 现在都汇聚在同一个工作台里。</p>
+      <h2>循知而行，<br />问有所归。</h2>
+      <p>从散落的资料到有据可循的答案，让小溪陪你探索知识、分析数据。</p>
       <div class="auth-feature-list">
         <div>
           <i class="fa-solid fa-magnifying-glass-chart"></i>
@@ -26,13 +26,13 @@
     <div class="auth-panel">
       <div class="auth-panel-heading">
         <span class="auth-mini-logo" aria-hidden="true">
-          <img :src="superMewMark" class="brand-mark-image" alt="" />
+          <img :src="wenxiMark" class="brand-mark-image" alt="" />
         </span>
         <div>
           <span class="auth-eyebrow">{{
             authStore.authMode === 'login' ? 'Welcome back' : 'Create account'
           }}</span>
-          <h1>{{ authStore.authMode === 'login' ? '登录喵喵助手' : '注册喵喵助手' }}</h1>
+          <h1>{{ authStore.authMode === 'login' ? '登录问溪' : '注册问溪' }}</h1>
         </div>
       </div>
       <p class="auth-description">
@@ -128,7 +128,7 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth';
-import superMewMark from '@/assets/images/supermew-mark.png';
+import wenxiMark from '@/assets/images/wenxi-mark.png';
 
 const authStore = useAuthStore();
 

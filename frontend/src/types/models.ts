@@ -7,6 +7,7 @@ export interface ModelProfile {
   model_name: string;
   base_url: string;
   timeout_seconds: number;
+  enable_thinking: boolean | null;
   supports_stream: boolean;
   supports_structured_output: boolean;
   enabled: boolean;
@@ -37,6 +38,7 @@ export interface ModelProfilePayload {
   model_name: string;
   base_url: string;
   timeout_seconds: number;
+  enable_thinking: boolean | null;
   supports_stream: boolean;
   supports_structured_output: boolean;
   enabled: boolean;

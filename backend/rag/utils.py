@@ -526,9 +526,9 @@ def rewrite_query_once(
             timeout_seconds = 15.0
 
     result = _provider_executor.call(
-        lambda: model.with_structured_output(RewritePlan).invoke(
-            [{"role": "user", "content": REWRITE_PROMPT.format(query=query)}]
-        ),
+        lambda: model.with_structured_output(
+            RewritePlan, method="function_calling"
+        ).invoke([{"role": "user", "content": REWRITE_PROMPT.format(query=query)}]),
         context=ProviderCallContext(
             provider=provider_name,
             operation=ProviderOperation.MODEL,

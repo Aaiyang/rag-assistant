@@ -1,6 +1,6 @@
-# SuperMew Knowledge Agent Platform
+# 问溪（Wenxi）Knowledge Agent Platform
 
-SuperMew 是知识库优先的智能任务平台。它以持久化 **Thread**、可恢复 **Run**、版本化 **Event** 和可审计 **Tool** 执行为核心，让 RAG、HITL 与专业 Skill 共享同一运行生命周期。
+问溪是知识库优先的智能任务平台。它以持久化 **Thread**、可恢复 **Run**、版本化 **Event** 和可审计 **Tool** 执行为核心，让 RAG、HITL 与专业 Skill 共享同一运行生命周期。
 
 ## Language
 

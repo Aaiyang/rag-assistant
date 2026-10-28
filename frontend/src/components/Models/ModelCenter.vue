@@ -201,6 +201,13 @@
                   <span :class="{ disabled: !profile.supports_stream }">Stream</span>
                   <span :class="{ disabled: !profile.supports_structured_output }">Structured</span>
                   <span>{{ profile.timeout_seconds }}s</span>
+                  <span>{{
+                    profile.enable_thinking === null
+                      ? '思考：默认'
+                      : profile.enable_thinking
+                        ? '思考：开启'
+                        : '思考：关闭'
+                  }}</span>
                 </div>
               </td>
               <td>
@@ -320,6 +327,15 @@
                   step="1"
                   required
                 />
+              </label>
+              <label class="form-field">
+                <span>思考模式</span>
+                <select v-model="profileForm.enable_thinking">
+                  <option :value="null">跟随服务商默认</option>
+                  <option :value="false">关闭思考</option>
+                  <option :value="true">开启思考</option>
+                </select>
+                <small>开启或关闭仅适用于支持 enable_thinking 参数的 API；仅影响新建任务。</small>
               </label>
               <div class="secret-boundary">
                 <i class="fa-solid fa-shield-halved"></i>
@@ -454,6 +470,7 @@ const emptyProfileForm = (): ModelProfilePayload => ({
   model_name: '',
   base_url: '',
   timeout_seconds: 30,
+  enable_thinking: null,
   supports_stream: true,
   supports_structured_output: true,
   enabled: true,
@@ -558,6 +575,7 @@ const openEditProfile = async (profile: ModelProfile) => {
     model_name: profile.model_name,
     base_url: profile.base_url,
     timeout_seconds: profile.timeout_seconds,
+    enable_thinking: profile.enable_thinking,
     supports_stream: profile.supports_stream,
     supports_structured_output: profile.supports_structured_output,
     enabled: profile.enabled,
@@ -676,14 +694,14 @@ onMounted(refresh);
 }
 
 .primary-button {
-  color: #111820;
-  background: linear-gradient(135deg, var(--mint), var(--lilac));
-  box-shadow: 0 10px 24px rgba(116, 225, 183, 0.12);
+  color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  box-shadow: 0 10px 24px rgba(var(--accent-rgb), 0.12);
 }
 
 html[data-theme='light'] .primary-button {
   color: white;
-  background: linear-gradient(135deg, var(--mint-strong), var(--lilac-strong));
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent-secondary-strong));
 }
 
 .secondary-button {
@@ -760,8 +778,8 @@ html[data-theme='light'] .primary-button {
   flex: 0 0 auto;
   place-items: center;
   border-radius: 10px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.08);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 .control-summary article > div {
@@ -818,7 +836,7 @@ html[data-theme='light'] .primary-button {
 }
 
 .section-kicker {
-  color: var(--mint);
+  color: var(--accent);
   font-size: var(--font-caption);
   font-weight: 780;
   letter-spacing: 0.13em;
@@ -835,10 +853,10 @@ html[data-theme='light'] .primary-button {
   align-items: center;
   gap: 7px;
   padding: 7px 9px;
-  border: 1px solid rgba(200, 185, 255, 0.2);
+  border: 1px solid rgba(var(--accent-secondary-rgb), 0.2);
   border-radius: 999px;
-  color: var(--lilac);
-  background: rgba(200, 185, 255, 0.07);
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-secondary-rgb), 0.07);
   font-size: var(--font-small);
   font-weight: 680;
 }
@@ -869,8 +887,8 @@ html[data-theme='light'] .primary-button {
   flex: 0 0 auto;
   place-items: center;
   border-radius: 10px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.08);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 .role-icon.is-fast {
@@ -879,8 +897,8 @@ html[data-theme='light'] .primary-button {
 }
 
 .role-icon.is-grader {
-  color: var(--lilac);
-  background: rgba(200, 185, 255, 0.08);
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-secondary-rgb), 0.08);
 }
 
 .role-icon.is-evaluator {
@@ -1056,8 +1074,8 @@ html[data-theme='light'] .primary-button {
   flex: 0 0 auto;
   place-items: center;
   border-radius: 9px;
-  color: #171622;
-  background: linear-gradient(135deg, var(--mint), var(--lilac));
+  color: var(--accent-ink);
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
   font-size: var(--font-ui);
   font-weight: 820;
 }
@@ -1102,9 +1120,9 @@ html[data-theme='light'] .primary-button {
 }
 
 .role-tags span {
-  border-color: rgba(200, 185, 255, 0.17);
-  color: var(--lilac);
-  background: rgba(200, 185, 255, 0.06);
+  border-color: rgba(var(--accent-secondary-rgb), 0.17);
+  color: var(--accent-secondary);
+  background: rgba(var(--accent-secondary-rgb), 0.06);
 }
 
 .profile-status {
@@ -1167,7 +1185,7 @@ html[data-theme='light'] .primary-button {
 }
 
 .empty-state > i {
-  color: var(--mint);
+  color: var(--accent);
   font-size: 20px;
 }
 
@@ -1184,8 +1202,8 @@ html[data-theme='light'] .primary-button {
   margin-top: 5px;
   padding: 8px 10px;
   border-radius: 9px;
-  color: var(--mint-ink);
-  background: var(--mint);
+  color: var(--accent-ink);
+  background: var(--accent);
   cursor: pointer;
   font-size: var(--font-small);
   font-weight: 720;
@@ -1274,7 +1292,7 @@ html[data-theme='light'] .primary-button {
 
 .form-field input:focus,
 .form-field select:focus {
-  border-color: rgba(168, 246, 209, 0.35);
+  border-color: rgba(var(--accent-rgb), 0.35);
 }
 
 .form-field small {
@@ -1341,7 +1359,7 @@ html[data-theme='light'] .primary-button {
 
 .capability-fieldset input {
   margin-top: 2px;
-  accent-color: var(--mint-strong);
+  accent-color: var(--accent-strong);
 }
 
 .capability-fieldset strong,

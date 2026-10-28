@@ -1,0 +1,484 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Learning Document",
+  "description": "Skill 产出给前端渲染的完整数据格式。前端用这个 JSON 渲染可交互的学习文档。",
+  "type": "object",
+  "required": [
+    "meta",
+    "chapters"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "description": "项目元信息，前端用做页面标题和基本信息展示",
+      "required": [
+        "projectName",
+        "primaryLanguage",
+        "framework",
+        "granularity",
+        "generatedAt"
+      ],
+      "properties": {
+        "projectName": {
+          "type": "string",
+          "description": "项目名称，从构建文件或目录名提取"
+        },
+        "primaryLanguage": {
+          "type": "string",
+          "description": "主语言，如 Java / Go / Python / TypeScript"
+        },
+        "framework": {
+          "type": "string",
+          "description": "主框架，如 Spring Boot / Gin / FastAPI / Next.js"
+        },
+        "description": {
+          "type": "string",
+          "description": "一句话描述这个项目是做什么的"
+        },
+        "granularity": {
+          "type": "string",
+          "enum": [
+            "overview",
+            "standard",
+            "line-by-line"
+          ],
+          "description": "生成时的粒度档位。前端可用于初始展示切换按钮的位置"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "生成时间，ISO 8601 格式"
+        }
+      }
+    },
+    "chapters": {
+      "type": "array",
+      "description": "章节列表，顺序就是展示顺序",
+      "items": {
+        "$ref": "#/$defs/chapter"
+      }
+    }
+  },
+  "$defs": {
+    "chapter": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "sections"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "唯一标识，如 preparation / architecture / practice / interview"
+        },
+        "title": {
+          "type": "string",
+          "description": "章节标题，如 前置准备 / 架构设计 / 实战演练 / 面试准备"
+        },
+        "optional": {
+          "type": "boolean",
+          "default": false,
+          "description": "标记是否可选章节（如面试准备）。前端拿到后应正常展示，但可加一个 可选 标签"
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": [
+        "title",
+        "blocks"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "小节标题"
+        },
+        "anchor": {
+          "type": "string",
+          "description": "用于目录跳转的锚点 ID，前端生成左侧导航用"
+        },
+        "groupTitle": {
+          "type": "string",
+          "description": "可选。本节所属的模块名称。前端用此字段在侧边栏中将同模块的 section 分组到可折叠的模块标题下。如 用户模块 / 秒杀模块"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced"
+          ],
+          "description": "Optional. Difficulty level for progressive learning path."
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optional. Estimated reading/study time in minutes. Frontend shows 约15分钟."
+        },
+        "blocks": {
+          "type": "array",
+          "description": "内容块列表，按顺序渲染。一个 block 就是前端渲染的一个单元",
+          "items": {
+            "$ref": "#/$defs/block"
+          }
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "description": "内容的最小渲染单元。type 决定前端怎么渲染。教学文档应优先使用 text 做概念讲解和背景知识介绍，然后用 callchain 展示代码走读。避免大面积使用 endpoint+paramTable 罗列参数——参数说明应融入 callchain 的代码走读中。",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "code",
+            "endpoint",
+            "callchain",
+            "diagram",
+            "table",
+            "question",
+            "list"
+          ],
+          "description": "block 类型，前端据此选择渲染组件"
+        },
+        "text": {
+          "type": "string",
+          "description": "当 type=text 时，Markdown 格式的正文内容"
+        },
+        "code": {
+          "type": "object",
+          "description": "独立的代码块。用于配置文件、SQL 建表语句、关键算法等。接口的业务逻辑代码应放在 callchain 中，而不是作为独立 code block",
+          "required": [
+            "language",
+            "content"
+          ],
+          "properties": {
+            "language": {
+              "type": "string",
+              "description": "编程语言，用于高亮"
+            },
+            "content": {
+              "type": "string",
+              "description": "代码原文"
+            },
+            "caption": {
+              "type": "string",
+              "description": "代码块上方的小标题，如 UserController.java:42"
+            },
+            "lineHighlights": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "description": "需要高亮的行号列表"
+            }
+          }
+        },
+        "endpoint": {
+          "type": "object",
+          "description": "API 接口的简要定义。教学文档中仅在需要标注接口路由时使用。详细的请求/响应说明应放入 callchain 中作为代码走读的一部分，而不是通过 paramTable 罗列参数",
+          "required": [
+            "method",
+            "path",
+            "summary"
+          ],
+          "properties": {
+            "method": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "description": "接口路径，如 /api/user/login"
+            },
+            "summary": {
+              "type": "string",
+              "description": "一句话说明这个接口做什么。必填，教学文档必须说明接口的业务用途"
+            },
+            "request": {
+              "$ref": "#/$defs/paramTable"
+            },
+            "response": {
+              "$ref": "#/$defs/paramTable"
+            },
+            "description": {
+              "type": "string",
+              "description": "对这个接口在教学上下文中的说明——它在业务流程中的角色、为什么需要这个接口。不是参数罗列。1-3 句话"
+            }
+          }
+        },
+        "callchain": {
+          "type": "object",
+          "description": "当 type=callchain 时，一个接口的完整调用链追踪",
+          "required": [
+            "endpoint",
+            "steps"
+          ],
+          "properties": {
+            "endpoint": {
+              "type": "string",
+              "description": "指向哪个接口，如 POST /api/user/login"
+            },
+            "steps": {
+              "type": "array",
+              "description": "调用链步骤，从外到内排列",
+              "items": {
+                "$ref": "#/$defs/callchainStep"
+              }
+            }
+          }
+        },
+        "diagram": {
+          "type": "object",
+          "description": "当 type=diagram 时，Mermaid 图表",
+          "required": [
+            "language",
+            "content"
+          ],
+          "properties": {
+            "language": {
+              "type": "string",
+              "enum": [
+                "mermaid",
+                "plantuml"
+              ],
+              "description": "图表语言"
+            },
+            "content": {
+              "type": "string",
+              "description": "图表源码，前端用 mermaid.js 或 plantuml 渲染"
+            },
+            "caption": {
+              "type": "string",
+              "description": "图表标题"
+            }
+          }
+        },
+        "table": {
+          "type": "object",
+          "description": "结构化表格。用于技术栈列表、模块职责等场景。不要用表格罗列接口参数（参数说明应融入 callchain 的代码走读中）",
+          "required": [
+            "headers",
+            "rows"
+          ],
+          "properties": {
+            "headers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "question": {
+          "type": "object",
+          "description": "当 type=question 时，一道面试题（仅在面试准备章节出现）",
+          "required": [
+            "category",
+            "question",
+            "answer"
+          ],
+          "properties": {
+            "category": {
+              "type": "string",
+              "description": "题目分类，如 架构设计 / 设计模式 / 技术决策 / 代码细节"
+            },
+            "question": {
+              "type": "string"
+            },
+            "answer": {
+              "type": "string",
+              "description": "基于项目实际代码的参考答案，Markdown 格式"
+            }
+          }
+        },
+        "list": {
+          "type": "object",
+          "description": "当 type=list 时，结构化列表（带图标或序号的列表）",
+          "required": [
+            "style",
+            "items"
+          ],
+          "properties": {
+            "style": {
+              "type": "string",
+              "enum": [
+                "ordered",
+                "unordered",
+                "icon"
+              ],
+              "description": "ordered=数字序号, unordered=圆点, icon=带前置图标"
+            },
+            "icon": {
+              "type": "string",
+              "description": "当 style=icon 时，图标名称（前端自行映射到图标库）"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "列表项内容，Markdown 格式"
+                  },
+                  "highlight": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "是否高亮此条"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "paramTable": {
+      "type": "object",
+      "description": "参数参考表（仅作补充，不应大面积使用）。教学文档优先在 callchain 中通过代码走读和 explanation 解释参数，而非使用表格罗列",
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "description": "如 application/json"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "type",
+              "required",
+              "description"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "只列出关键或有教学价值的字段，不需要列出全部字段"
+        },
+        "example": {
+          "type": "string",
+          "description": "示例比字段表格更有教学价值，优先提供 example 而非逐字段展开"
+        }
+      }
+    },
+    "callchainStep": {
+      "type": "object",
+      "description": "调用链中的一个节点，代表一层代码。这是教学文档的核心——通过逐层追踪展示请求如何流转",
+      "required": [
+        "layer",
+        "filePath",
+        "explanation"
+      ],
+      "properties": {
+        "layer": {
+          "type": "string",
+          "description": "层级名称，如 Controller / Service / DAO / Middleware / External API"
+        },
+        "filePath": {
+          "type": "string",
+          "description": "源文件路径 + 行号范围，如 src/main/java/com/example/UserController.java:42-58"
+        },
+        "functionName": {
+          "type": "string",
+          "description": "函数/方法名，如 login()"
+        },
+        "explanation": {
+          "type": "string",
+          "description": "这一层的教学讲解。建议 2-4 句话，用自然语言解释做了什么以及**为什么这样做**——解释设计意图，而不只是翻译代码"
+        },
+        "code": {
+          "type": "string",
+          "description": "该层的核心代码片段。省略 import、注解、日志打点、setter/getter 等样板代码，只保留体现业务逻辑的关键行。粗粒度时为空，标准粒度时是关键片段，细粒度时是完整方法体"
+        },
+        "language": {
+          "type": "string",
+          "description": "Optional. Programming language of the 'code' field for syntax highlighting. If omitted, defaults to meta.primaryLanguage."
+        },
+        "sql": {
+          "type": "string",
+          "description": "仅当 layer=DAO 时可能有，展示与该步骤相关的 SQL 语句。省略无关字段"
+        },
+        "lineHighlights": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Optional. Line numbers to highlight within this step's code block."
+        },
+        "lineAnnotations": {
+          "type": "array",
+          "description": "仅逐行粒度（line-by-line）时有内容，对代码片段逐行解释",
+          "items": {
+            "type": "object",
+            "required": [
+              "line",
+              "annotation"
+            ],
+            "properties": {
+              "line": {
+                "type": "integer"
+              },
+              "annotation": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "keyPoint": {
+          "type": "string",
+          "description": "本步骤最核心的 1 个知识点或设计要点，一行总结。如「使用 BCrypt 哈希密码而非明文存储」。前端可用高亮卡片/标注框突出展示"
+        },
+        "subSteps": {
+          "type": "array",
+          "description": "可选，当前步骤内部调用了其他函数时的子调用链",
+          "items": {
+            "$ref": "#/$defs/callchainStep"
+          }
+        }
+      }
+    }
+  }
+}

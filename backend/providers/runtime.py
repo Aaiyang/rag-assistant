@@ -11,6 +11,7 @@ from backend.providers.embedding import (
     EmbeddingRuntime,
     EmbeddingService,
 )
+from backend.providers.embedding_http import HttpxEmbeddingEncoder
 from backend.providers.loop_bridge import ProviderLoopBridge, provider_loop_bridge
 from backend.providers.rerank import (
     DisabledRerankerAdapter,
@@ -41,7 +42,18 @@ class ProviderRuntime:
         self.settings = settings or get_settings()
         self.bridge = bridge or provider_loop_bridge
         embedding = self.settings.embedding
+        remote_encoder = (
+            HttpxEmbeddingEncoder(
+                endpoint=embedding.endpoint,
+                model=embedding.model,
+                api_key=embedding.api_key.get_secret_value(),
+                timeout_seconds=embedding.timeout_seconds,
+            )
+            if embedding.provider == "openai-compatible"
+            else None
+        )
         self.embedding_runtime = EmbeddingRuntime(
+            remote_encoder=remote_encoder,
             model_name=embedding.model,
             model_revision=embedding.revision,
             device=embedding.device,

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -96,6 +98,13 @@ class RagSettings(_EnvSettings):
 
 
 class EmbeddingSettings(_EnvSettings):
+    provider: Literal["local", "openai-compatible"] = Field(
+        default="local", validation_alias="EMBEDDING_PROVIDER"
+    )
+    base_url: str = Field(default="", validation_alias="EMBEDDING_BASE_URL")
+    api_key: SecretStr = Field(
+        default=SecretStr(""), validation_alias="EMBEDDING_API_KEY"
+    )
     model: str = Field(default="BAAI/bge-m3", validation_alias="EMBEDDING_MODEL")
     revision: str = Field(
         default="5617a9f61b028005a4858fdac845db406aefb181",
@@ -159,6 +168,28 @@ class EmbeddingSettings(_EnvSettings):
         default=True,
         validation_alias="EMBEDDING_WARMUP_ON_START",
     )
+
+    @property
+    def endpoint(self) -> str:
+        return self.base_url.strip().rstrip("/") + "/embeddings"
+
+    @property
+    def index_identity(self) -> str:
+        if self.provider == "local":
+            return f"{self.model}@{self.revision}"[:160]
+        identity = json.dumps(
+            [
+                self.provider,
+                self.base_url.strip().rstrip("/"),
+                self.model,
+                self.revision,
+                self.dimension,
+                "l2-normalized",
+            ],
+            separators=(",", ":"),
+        )
+        digest = hashlib.sha256(identity.encode()).hexdigest()
+        return f"{self.model[:64]}@api:{digest}"
 
 
 def _is_placeholder(value: str) -> bool:
@@ -1151,6 +1182,23 @@ class AppSettings(BaseModel):
 
     def validate_startup(self) -> None:
         problems: list[str] = []
+        if self.embedding.provider == "openai-compatible":
+            endpoint = urlsplit(self.embedding.base_url.strip())
+            if (
+                endpoint.scheme != "https"
+                or not endpoint.hostname
+                or endpoint.username is not None
+                or endpoint.password is not None
+                or endpoint.query
+                or endpoint.fragment
+            ):
+                problems.append(
+                    "EMBEDDING_BASE_URL 必须是无 credential/query/fragment 的 HTTPS API 基址"
+                )
+            if _is_placeholder(self.embedding.api_key.get_secret_value()):
+                problems.append("远程嵌入必须配置 EMBEDDING_API_KEY")
+            if _is_placeholder(self.embedding.model):
+                problems.append("远程嵌入必须配置 EMBEDDING_MODEL")
         secret = self.security.jwt_secret_key.get_secret_value().strip()
         if len(secret) < 32 or secret.lower() in _WEAK_SECRETS:
             problems.append("JWT_SECRET_KEY 必须是至少 32 字符的随机密钥")
@@ -1429,6 +1477,8 @@ class AppSettings(BaseModel):
     def redacted_dict(self) -> dict:
         payload = self.model_dump(mode="json")
         payload["models"]["api_key"] = "***"
+        payload["embedding"]["api_key"] = "***"
+        payload["embedding"]["base_url"] = "***"
         payload["rerank"]["api_key"] = "***"
         payload["security"]["jwt_secret_key"] = "***"
         payload["security"]["admin_invite_code"] = "***"

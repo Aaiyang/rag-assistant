@@ -560,8 +560,8 @@ class DockerSandboxAdapter:
             f"fsize={limits.max_file_bytes}:{limits.max_file_bytes}",
             "--ipc",
             "none",
-            "--pid",
-            "private",
+            # Omitting --pid gives each container its own PID namespace.
+            # Docker only accepts host/container modes, not "private".
             "--user",
             self.config.user,
             "--hostname",

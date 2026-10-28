@@ -425,8 +425,8 @@ const rolesLabel = (roles: string[]) =>
   border-radius: 24px;
   color: var(--text);
   background:
-    radial-gradient(circle at 92% 3%, rgba(103, 217, 173, 0.12), transparent 30%),
-    radial-gradient(circle at 5% 2%, rgba(142, 121, 255, 0.13), transparent 30%),
+    radial-gradient(circle at 92% 3%, rgba(var(--accent-rgb), 0.12), transparent 30%),
+    radial-gradient(circle at 5% 2%, rgba(var(--accent-secondary-rgb), 0.13), transparent 30%),
     var(--surface-strong);
   box-shadow: var(--shadow);
 }
@@ -441,7 +441,7 @@ const rolesLabel = (roles: string[]) =>
 }
 
 .capability-eyebrow {
-  color: var(--mint);
+  color: var(--accent);
   font-size: var(--font-caption);
   font-weight: 780;
   letter-spacing: 0.12em;
@@ -597,12 +597,12 @@ const rolesLabel = (roles: string[]) =>
 
 .skill-card.is-general {
   margin-bottom: 12px;
-  background: linear-gradient(135deg, rgba(168, 246, 209, 0.06), var(--surface));
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.06), var(--surface));
 }
 
 .skill-card.selected {
-  border-color: rgba(168, 246, 209, 0.36);
-  background: rgba(168, 246, 209, 0.055);
+  border-color: rgba(var(--accent-rgb), 0.36);
+  background: rgba(var(--accent-rgb), 0.055);
 }
 
 .skill-card.unavailable,
@@ -620,7 +620,7 @@ const rolesLabel = (roles: string[]) =>
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  color: var(--mint);
+  color: var(--accent);
   background: var(--surface-soft);
 }
 
@@ -713,8 +713,8 @@ const rolesLabel = (roles: string[]) =>
   padding: 7px 10px;
   border: 1px solid var(--line-strong);
   border-radius: 9px;
-  color: var(--mint);
-  background: rgba(168, 246, 209, 0.06);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
   cursor: pointer;
   font-size: var(--font-caption);
   font-weight: 680;
@@ -750,7 +750,7 @@ const rolesLabel = (roles: string[]) =>
 }
 
 .tool-card-heading code {
-  color: var(--lilac);
+  color: var(--accent-secondary);
   font-size: var(--font-small);
 }
 
@@ -814,7 +814,7 @@ const rolesLabel = (roles: string[]) =>
 }
 
 .capability-state > i {
-  color: var(--mint);
+  color: var(--accent);
   font-size: 20px;
 }
 

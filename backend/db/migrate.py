@@ -8,7 +8,7 @@ from backend.infra.database import alembic_config
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="SuperMew schema migration helper")
+    parser = argparse.ArgumentParser(description="Wenxi schema migration helper")
     parser.add_argument("action", choices=["upgrade", "downgrade", "current"])
     parser.add_argument("revision", nargs="?", default="head")
     args = parser.parse_args()

@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -300,6 +301,8 @@ def test_session_describe_activates_and_context_uses_progressive_disclosure(
         ("entrypoint", "../outside.md"),
         ("entrypoint", "/tmp/outside.md"),
         ("entrypoint", "nested\\SKILL.md"),
+        ("entrypoint", "C:SKILL.md"),
+        ("entrypoint", "SKILL.md:payload"),
     ],
 )
 def test_manifest_rejects_invalid_contract_values(
@@ -394,16 +397,27 @@ def test_registry_rejects_duplicate_skill_names(tmp_path: Path) -> None:
         SkillRegistry.load(root, {"query_data"})
 
 
-def test_registry_rejects_symlinks_bad_utf8_and_oversized_content(
+def _symlink(link: Path, target: Path, *, directory: bool = False) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=directory)
+    except OSError as exc:
+        if os.name == "nt" and exc.winerror == 1314:
+            pytest.skip("Windows symlink creation requires Developer Mode or privilege")
+        raise
+
+
+def test_registry_rejects_symlinked_skill_directory(
     tmp_path: Path,
 ) -> None:
     symlink_root = tmp_path / "symlink"
     symlink_root.mkdir()
     real_skill = _write_skill(symlink_root, directory="real")
-    (symlink_root / "linked").symlink_to(real_skill, target_is_directory=True)
+    _symlink(symlink_root / "linked", real_skill, directory=True)
     with pytest.raises(SkillRegistryError, match="symlinks are not allowed"):
         SkillRegistry.load(symlink_root, {"query_data"})
 
+
+def test_registry_rejects_bad_utf8_and_oversized_content(tmp_path: Path) -> None:
     utf8_root = tmp_path / "utf8"
     utf8_root.mkdir()
     _write_skill(utf8_root, content=b"\xff")
@@ -427,7 +441,7 @@ def test_registry_rejects_entrypoint_symlink_even_when_target_stays_inside_root(
     target = skill_dir / "real.md"
     target.write_text("real", encoding="utf-8")
     entrypoint.unlink()
-    entrypoint.symlink_to(target)
+    _symlink(entrypoint, target)
 
     with pytest.raises(SkillRegistryError, match="symlinks are not allowed"):
         SkillRegistry.load(root, {"query_data"})
@@ -442,7 +456,7 @@ def test_registry_rejects_symlinked_manifest_and_entrypoint_directory(
     manifest = manifest_skill / "skill.yaml"
     real_manifest = manifest_skill / "real-skill.yaml"
     manifest.rename(real_manifest)
-    manifest.symlink_to(real_manifest)
+    _symlink(manifest, real_manifest)
     with pytest.raises(SkillRegistryError, match="symlinks are not allowed"):
         SkillRegistry.load(manifest_root, {"query_data"})
 
@@ -455,11 +469,12 @@ def test_registry_rejects_symlinked_manifest_and_entrypoint_directory(
     instructions = entrypoint_skill / "instructions"
     real_instructions = entrypoint_skill / "real-instructions"
     instructions.rename(real_instructions)
-    instructions.symlink_to(real_instructions, target_is_directory=True)
+    _symlink(instructions, real_instructions, directory=True)
     with pytest.raises(SkillRegistryError, match="symlinks are not allowed"):
         SkillRegistry.load(entrypoint_root, {"query_data"})
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file descriptor semantics")
 def test_registry_reads_manifest_and_entrypoint_from_opened_file_descriptors(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -522,6 +537,186 @@ def test_registry_reads_manifest_and_entrypoint_from_opened_file_descriptors(
     assert any(
         name == "analysis" and flags & os.O_DIRECTORY for name, flags in relative_opens
     )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows native handle semantics")
+def test_windows_registry_loads_nested_unicode_paths(tmp_path: Path) -> None:
+    root = tmp_path / "知识库"
+    root.mkdir()
+    _write_skill(root, entrypoint="说明/使用.md", content="安全指令".encode())
+
+    registry = SkillRegistry.load(root, {"query_data"})
+
+    assert registry.activate("analysis", SkillAccess(), "router").content == "安全指令"
+
+
+def _junction(link: Path, target: Path) -> None:
+    subprocess.run(
+        ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+        check=True,
+        capture_output=True,
+    )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows directory reparse points")
+@pytest.mark.parametrize("location", ["root", "skill", "entrypoint"])
+def test_windows_registry_rejects_junctions(tmp_path: Path, location: str) -> None:
+    root = tmp_path / "skills"
+    root.mkdir()
+    skill = _write_skill(root, entrypoint="instructions/SKILL.md")
+    if location == "root":
+        linked = tmp_path / "linked-root"
+        _junction(linked, root)
+        root = linked
+    elif location == "skill":
+        _junction(root / "linked-skill", skill)
+    else:
+        original = skill / "instructions"
+        target = skill / "original-instructions"
+        original.rename(target)
+        _junction(original, target)
+
+    with pytest.raises(SkillRegistryError, match="symlink"):
+        SkillRegistry.load(root, {"query_data"})
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows native handle semantics")
+def test_windows_registry_blocks_concurrent_file_replacement_and_writes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.skills import registry as module
+
+    root = tmp_path / "skills"
+    root.mkdir()
+    skill = _write_skill(root)
+    replacement = tmp_path / "replacement.md"
+    replacement.write_bytes(b"attacker instructions")
+    real_open = module._files.open_file_at
+    protected: set[str] = set()
+
+    def attack(name: str) -> None:
+        with pytest.raises(PermissionError):
+            os.replace(replacement, skill / name)
+        with pytest.raises(PermissionError):
+            (skill / name).write_bytes(b"attacker instructions")
+
+    def racing_open(parent: int, name: str) -> int:
+        handle = real_open(parent, name)
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                executor.submit(attack, name).result(timeout=5)
+            protected.add(name)
+            return handle
+        except BaseException:
+            module._files.close(handle)
+            raise
+
+    monkeypatch.setattr(module._files, "open_file_at", racing_open)
+    registry = SkillRegistry.load(root, {"query_data"})
+
+    assert protected == {"skill.yaml", "SKILL.md"}
+    assert registry.activate("analysis", SkillAccess(), "router").content == (
+        "# Analysis\nUse the approved query tool."
+    )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows directory replacement race")
+def test_windows_registry_rejects_root_replaced_by_junction_after_inspection(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.skills import registry as module
+
+    root = tmp_path / "skills"
+    root.mkdir()
+    _write_skill(root)
+    attacker = tmp_path / "attacker"
+    attacker.mkdir()
+    _write_skill(attacker, content=b"attacker instructions")
+    real_open = module._files.open_root
+    replaced = False
+
+    def racing_open(path: Path) -> int:
+        nonlocal replaced
+        root.rename(tmp_path / "original")
+        _junction(root, attacker)
+        replaced = True
+        return real_open(path)
+
+    monkeypatch.setattr(module._files, "open_root", racing_open)
+    with pytest.raises(SkillRegistryError, match="skill root must not be a symlink"):
+        SkillRegistry.load(root, {"query_data"})
+    assert replaced
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows directory handle sharing")
+def test_windows_registry_blocks_skill_directory_replacement_while_loading(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.skills import registry as module
+
+    root = tmp_path / "skills"
+    root.mkdir()
+    skill = _write_skill(root)
+    real_stat = module._files.stat_mode_at
+    attempted = False
+
+    def racing_stat(parent: int, name: str) -> int:
+        nonlocal attempted
+        mode = real_stat(parent, name)
+        if name == "analysis":
+            with pytest.raises(PermissionError):
+                skill.rename(root / "replaced")
+            attempted = True
+        return mode
+
+    monkeypatch.setattr(module._files, "stat_mode_at", racing_stat)
+    registry = SkillRegistry.load(root, {"query_data"})
+    assert attempted
+    assert registry.activate("analysis", SkillAccess(), "router").content == (
+        "# Analysis\nUse the approved query tool."
+    )
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows handle lifetime")
+def test_windows_registry_releases_handles_after_rejected_content(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "skills"
+    root.mkdir()
+    skill = _write_skill(root, content=b"bad\x00content")
+    with pytest.raises(SkillRegistryError, match="NUL bytes"):
+        SkillRegistry.load(root, {"query_data"})
+
+    # Windows denies these renames if the loader leaked a handle.
+    (skill / "SKILL.md").rename(skill / "renamed.md")
+    skill.rename(root / "renamed-skill")
+    root.rename(tmp_path / "renamed-root")
+
+
+def test_registry_never_falls_back_to_path_reads_after_native_read_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from backend.skills import registry as module
+
+    root = tmp_path / "skills"
+    root.mkdir()
+    _write_skill(root)
+
+    def denied_read(handle: int, count: int) -> bytes:
+        raise OSError("read denied")
+
+    def forbidden_path_read(*args, **kwargs):
+        raise AssertionError("path-based read bypassed native failure")
+
+    monkeypatch.setattr(module._files, "read", denied_read)
+    monkeypatch.setattr(Path, "read_bytes", forbidden_path_read)
+    monkeypatch.setattr(Path, "read_text", forbidden_path_read)
+    with pytest.raises(SkillRegistryError, match="cannot read skill manifest"):
+        SkillRegistry.load(root, {"query_data"})
 
 
 def test_concurrent_same_skill_activation_is_idempotent(tmp_path: Path) -> None:
